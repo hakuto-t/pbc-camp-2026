@@ -2,10 +2,709 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0;url=participants.html">
-<title>PBC合宿2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PBC合宿2026 参加者ご案内</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: #313131;
+    background: #ffffff;
+    line-height: 1.8;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== UTILITIES ===== */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .section {
+    padding: 80px 0;
+  }
+
+  .section-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #0693e3;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    margin-bottom: 48px;
+    color: #313131;
+  }
+
+  .section-divider {
+    width: 40px;
+    height: 2px;
+    background: #0693e3;
+    margin-bottom: 48px;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    text-align: center;
+    padding: 80px 24px 60px;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  }
+
+  .hero-logo {
+    width: 120px;
+    margin-bottom: 40px;
+  }
+
+  .hero-mv {
+    max-width: 560px;
+    width: 100%;
+    margin-bottom: 32px;
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: #666;
+    margin-bottom: 48px;
+  }
+
+  .hero-welcome {
+    max-width: 600px;
+    margin: 0 auto;
+    font-size: 16px;
+    line-height: 2.1;
+    color: #555;
+    text-align: center;
+  }
+
+  /* ===== OVERVIEW ===== */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .overview-table tr {
+    border-bottom: 1px solid #eee;
+  }
+
+  .overview-table th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 14px;
+    color: #888;
+    padding: 18px 16px 18px 0;
+    width: 130px;
+    vertical-align: top;
+    white-space: nowrap;
+  }
+
+  .overview-table td {
+    padding: 18px 0;
+    font-size: 16px;
+  }
+
+  .overview-table td a {
+    color: #0693e3;
+    text-decoration: none;
+  }
+
+  .overview-table td a:hover {
+    text-decoration: underline;
+  }
+
+  /* ===== THEME ===== */
+  .theme-section {
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  }
+
+  .theme-block {
+    text-align: center;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .theme-main {
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    line-height: 1.9;
+    margin-bottom: 20px;
+    color: #313131;
+  }
+
+  .theme-sub {
+    font-size: 18px;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    color: #555;
+    margin-bottom: 40px;
+  }
+
+  .theme-desc {
+    font-size: 15px;
+    line-height: 2;
+    color: #666;
+    text-align: left;
+  }
+
+  /* ===== TIMELINE ===== */
+  .timeline {
+    position: relative;
+    padding-left: 40px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: #e0e0e0;
+  }
+
+  .timeline-item {
+    position: relative;
+    padding-bottom: 28px;
+  }
+
+  .timeline-item:last-child {
+    padding-bottom: 0;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -40px;
+    top: 8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #0693e3;
+    z-index: 1;
+  }
+
+  .timeline-item.break::before {
+    background: #e0e0e0;
+    border-color: #e0e0e0;
+    width: 12px;
+    height: 12px;
+    left: -38px;
+    top: 10px;
+  }
+
+  .timeline-time {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0693e3;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .timeline-content {
+    font-size: 16px;
+    color: #313131;
+  }
+
+  .timeline-note {
+    margin-top: 40px;
+    font-size: 15px;
+    line-height: 2;
+    color: #666;
+    padding-left: 40px;
+  }
+
+  /* ===== ACCESS ===== */
+  .access-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 40px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .access-images img {
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
+    display: block;
+    border-radius: 8px;
+  }
+
+  .access-info {
+    margin-bottom: 24px;
+  }
+
+  .access-info dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+
+  .access-info dd {
+    font-size: 16px;
+    margin-bottom: 20px;
+  }
+
+  .access-callout {
+    background: #fff8e1;
+    border-left: 4px solid #ffc107;
+    padding: 20px 24px;
+    border-radius: 0 8px 8px 0;
+    font-size: 15px;
+    line-height: 2;
+    color: #5d4e00;
+  }
+
+  .access-callout strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+    color: #8a6d00;
+  }
+
+  .map-link {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 10px 28px;
+    background: #32373c;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    transition: opacity 0.2s;
+  }
+
+  .map-link:hover {
+    opacity: 0.85;
+  }
+
+  /* ===== NOTES ===== */
+  .notes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .note-card {
+    background: #fafafa;
+    border-radius: 12px;
+    padding: 28px 24px;
+    transition: box-shadow 0.2s;
+  }
+
+  .note-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+
+  .note-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .note-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #313131;
+  }
+
+  .note-text {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #666;
+  }
+
+  /* ===== FIRST-TIMERS ===== */
+  .first-timers-section {
+    background: #f0f7ff;
+  }
+
+  .first-timers-body {
+    max-width: 680px;
+    margin: 0 auto;
+    font-size: 16px;
+    line-height: 2.2;
+    color: #3a4a5c;
+  }
+
+  .first-timers-body p {
+    margin-bottom: 20px;
+  }
+
+  .first-timers-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ===== CONTACT ===== */
+  .contact-section {
+    background: #f8fbff;
+  }
+
+  .contact-text {
+    font-size: 16px;
+    line-height: 2.2;
+    color: #555;
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .contact-closing {
+    font-size: 16px;
+    line-height: 2;
+    color: #555;
+    text-align: center;
+    max-width: 600px;
+    margin: 40px auto 0;
+  }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    text-align: center;
+    padding: 60px 24px 48px;
+    border-top: 1px solid #eee;
+  }
+
+  .footer-logo {
+    width: 100px;
+    margin-bottom: 20px;
+    opacity: 0.7;
+  }
+
+  .footer-title {
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: #999;
+    margin-bottom: 6px;
+  }
+
+  .footer-date {
+    font-size: 13px;
+    color: #bbb;
+    letter-spacing: 0.04em;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 640px) {
+    .section {
+      padding: 56px 0;
+    }
+
+    .section-title {
+      font-size: 22px;
+      margin-bottom: 36px;
+    }
+
+    .hero {
+      padding: 56px 20px 40px;
+    }
+
+    .hero-logo {
+      width: 90px;
+      margin-bottom: 28px;
+    }
+
+    .hero-mv {
+      max-width: 320px;
+      margin-bottom: 24px;
+    }
+
+    .hero-sub {
+      font-size: 13px;
+    }
+
+    .hero-welcome {
+      font-size: 15px;
+      line-height: 2;
+    }
+
+    .overview-table th {
+      display: block;
+      padding: 14px 0 2px;
+      width: 100%;
+    }
+
+    .overview-table td {
+      display: block;
+      padding: 2px 0 14px;
+    }
+
+    .theme-main {
+      font-size: 18px;
+    }
+
+    .theme-sub {
+      font-size: 16px;
+    }
+
+    .access-images {
+      grid-template-columns: 1fr;
+    }
+
+    .access-images img {
+      height: 200px;
+    }
+
+    .notes-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .timeline {
+      padding-left: 36px;
+    }
+
+    .timeline-note {
+      padding-left: 36px;
+    }
+
+    .access-callout {
+      padding: 16px 20px;
+      font-size: 14px;
+    }
+
+    .first-timers-body {
+      font-size: 15px;
+    }
+  }
+</style>
 </head>
 <body>
-<p>リダイレクト中... <a href="participants.html">こちらをクリック</a></p>
+
+<!-- ===== 1. HERO ===== -->
+<section class="hero">
+  <div class="container">
+    <img src="https://esto-step.com/wp-content/themes/pbc-lp/images/common/logo.png" alt="PBC" class="hero-logo">
+    <br>
+    <img src="https://esto-step.com/wp-content/themes/pbc-lp/images/top/mv-title.png" alt="PBC合宿2026" class="hero-mv">
+    <p class="hero-sub">@ 横浜港大さん橋国際客船ターミナル</p>
+    <p class="hero-welcome">
+      PBC合宿2026にご参加いただきありがとうございます。<br>
+      当日、皆さまにとって素晴らしい時間になるよう、<br>
+      運営一同準備を進めています。<br><br>
+      このページでは、当日の流れと<br>
+      事前にお伝えしたいことをご案内します。
+    </p>
+  </div>
+</section>
+
+<!-- ===== 2. OVERVIEW ===== -->
+<section class="section">
+  <div class="container">
+    <span class="section-label">Overview</span>
+    <h2 class="section-title">開催概要</h2>
+    <div class="section-divider"></div>
+    <table class="overview-table">
+      <tr>
+        <th>日時</th>
+        <td>2026年4月22日（水）12:00〜20:00</td>
+      </tr>
+      <tr>
+        <th>会場</th>
+        <td>横浜港大さん橋国際客船ターミナル「大さん橋ホール」</td>
+      </tr>
+      <tr>
+        <th>住所</th>
+        <td>〒231-0002 神奈川県横浜市中区海岸通1丁目1-4 <a href="https://maps.google.com/?q=横浜港大さん橋国際客船ターミナル" target="_blank" rel="noopener">Google Map</a></td>
+      </tr>
+      <tr>
+        <th>参加費</th>
+        <td>22,000円（税込）</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 3. THEME ===== -->
+<section class="section theme-section">
+  <div class="container">
+    <span class="section-label">Theme</span>
+    <h2 class="section-title">テーマ</h2>
+    <div class="section-divider"></div>
+    <div class="theme-block">
+      <p class="theme-main">素晴らしいゲームを構築するための<br>重要な注意点</p>
+      <p class="theme-sub">どのようにしてゲームの状態をつくるのか</p>
+      <p class="theme-desc">
+        「ゲーム」という言葉の原義は、「人々が一緒に参加すること」を意味しています。企業や組織が本当に価値あるゲームを持ち、そこに関わる人々が共に勝利を目指して動いているとき、そのゲームには大きな力が宿ります。本合宿では、価値あるゲームとは何か、それをどのように構築し、どのような状態をつくり上げていくのかを深く探求します。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4. PROGRAM ===== -->
+<section class="section" style="background: #fafafa;">
+  <div class="container">
+    <span class="section-label">Program</span>
+    <h2 class="section-title">当日の流れ</h2>
+    <div class="section-divider"></div>
+    <table style="width:100%; border-collapse:collapse; font-size:16px;">
+      <thead>
+        <tr><th style="background:#313131; color:#fff; padding:10px 14px; text-align:left; width:130px;">時間</th><th style="background:#313131; color:#fff; padding:10px 14px; text-align:left;">内容</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:12px 14px; border-bottom:1px solid #eee;"><strong>12:00</strong></td><td style="padding:12px 14px; border-bottom:1px solid #eee;">受付開始・入場</td></tr>
+        <tr><td style="padding:12px 14px; border-bottom:1px solid #eee;"><strong>13:00</strong></td><td style="padding:12px 14px; border-bottom:1px solid #eee;">合宿の進め方</td></tr>
+        <tr style="background:#f0f7ff;"><td style="padding:12px 14px; border-bottom:1px solid #eee;"><strong>13:30</strong></td><td style="padding:12px 14px; border-bottom:1px solid #eee;">メインセミナー①（80分）</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:12px 14px; border-bottom:1px solid #eee;">14:50</td><td style="padding:12px 14px; border-bottom:1px solid #eee; color:#666;">休憩（20分）</td></tr>
+        <tr style="background:#f0f7ff;"><td style="padding:12px 14px; border-bottom:1px solid #eee;"><strong>15:10</strong></td><td style="padding:12px 14px; border-bottom:1px solid #eee;">メインセミナー②（80分）</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:12px 14px; border-bottom:1px solid #eee;">16:30</td><td style="padding:12px 14px; border-bottom:1px solid #eee; color:#666;">休憩（20分）</td></tr>
+        <tr style="background:#f0f7ff;"><td style="padding:12px 14px; border-bottom:1px solid #eee;"><strong>16:50</strong></td><td style="padding:12px 14px; border-bottom:1px solid #eee;">メインセミナー③（80分）</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:12px 14px; border-bottom:1px solid #eee;">18:10</td><td style="padding:12px 14px; border-bottom:1px solid #eee; color:#666;">休憩（20分）</td></tr>
+        <tr style="background:#f0f7ff;"><td style="padding:12px 14px; border-bottom:1px solid #eee;"><strong>18:30</strong></td><td style="padding:12px 14px; border-bottom:1px solid #eee;">メインセミナー④・クロージング（90分）</td></tr>
+        <tr><td style="padding:12px 14px;"><strong>20:00</strong></td><td style="padding:12px 14px;">終了</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:32px; font-size:15px; line-height:2; color:#666;">
+      セミナーは合計4部構成です。間に20分の休憩を挟みながら進行します。<br>
+      長丁場になりますが、集中して参加できるよう、体調を整えてお越しください。
+    </p>
+  </div>
+</section>
+
+<!-- ===== 5. ACCESS ===== -->
+<section class="section">
+  <div class="container">
+    <span class="section-label">Access</span>
+    <h2 class="section-title">会場へのアクセス</h2>
+    <div class="section-divider"></div>
+    <div class="access-images">
+      <img src="https://esto-step.com/wp-content/themes/pbc-lp/images/top/place01.jpg" alt="大さん橋ホール 外観">
+      <img src="https://esto-step.com/wp-content/themes/pbc-lp/images/top/place02.jpg" alt="大さん橋ホール 内観">
+    </div>
+    <dl class="access-info">
+      <dt>会場名</dt>
+      <dd>横浜港大さん橋国際客船ターミナル「大さん橋ホール」</dd>
+      <dt>住所</dt>
+      <dd>〒231-0002 神奈川県横浜市中区海岸通1丁目1-4</dd>
+    </dl>
+    <!-- 案内動画（縦型・スマホフレンドリー） -->
+    <div style="text-align:center; margin-bottom:32px;">
+      <p style="font-size:15px; color:#666; margin-bottom:16px;">最寄り駅からの道順（案内動画）</p>
+      <div style="max-width:360px; margin:0 auto; border-radius:12px; overflow:hidden;">
+        <video src="./動画_大さん橋までの行き方.mp4" controls playsinline preload="metadata" style="width:100%; display:block; border-radius:12px;"></video>
+      </div>
+    </div>
+
+    <div class="access-callout">
+      <strong>会場までの道のりについて</strong>
+      最寄り駅（みなとみらい線 日本大通り駅）から徒歩約15分です。<br>
+      道が分かりにくいため、時間に余裕を持ってお越しください。<br>
+      当日は会場付近にスタッフ（ビブス着用）が立ち、道案内をいたしますので、お気軽にお声かけください。
+    </div>
+    <div style="text-align: center; margin-top: 28px;">
+      <a href="https://maps.google.com/?q=横浜港大さん橋国際客船ターミナル" target="_blank" rel="noopener" class="map-link">Google Maps で見る</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6. NOTES ===== -->
+<section class="section" style="background: #fafafa;">
+  <div class="container">
+    <span class="section-label">Important Notes</span>
+    <h2 class="section-title">当日の持ち物・ご準備</h2>
+    <div class="section-divider"></div>
+    <div class="notes-grid">
+      <div class="note-card">
+        <span class="note-icon"></span>
+        <p class="note-title">お食事について</p>
+        <p class="note-text">昼食・夕食の提供はございません。12:00の受付開始前にお食事をお済ませの上、ご来場ください。会場内では軽飲食（お菓子・飲み物等）が可能です。</p>
+      </div>
+      <div class="note-card">
+        <span class="note-icon"></span>
+        <p class="note-title">録音・撮影について</p>
+        <p class="note-text">会場内での録音・写真撮影はご遠慮いただいております。ご理解のほどお願いいたします。</p>
+      </div>
+      <div class="note-card">
+        <span class="note-icon"></span>
+        <p class="note-title">喫煙について</p>
+        <p class="note-text">会場は原則禁煙です。休憩時間中に会場外の指定エリアをご利用いただけます。時間内に戻れるよう余裕を持ってご利用ください。</p>
+      </div>
+      <div class="note-card">
+        <span class="note-icon"></span>
+        <p class="note-title">雨天の場合</p>
+        <p class="note-text">雨天時は折りたたみ傘をお持ちいただくことをおすすめします。</p>
+      </div>
+      <div class="note-card">
+        <span class="note-icon"></span>
+        <p class="note-title">お荷物について</p>
+        <p class="note-text">会場内にクロークをご用意しています。受付後にスタッフがご案内いたしますので、お気軽にお預けください。</p>
+      </div>
+      <div class="note-card">
+        <span class="note-icon"></span>
+        <p class="note-title">Wi-Fiについて</p>
+        <p class="note-text">会場内のWi-Fiはご利用いただけません。必要な方はポケットWi-Fiまたはテザリングでご対応ください。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 7. FIRST-TIMERS ===== -->
+<section class="section first-timers-section">
+  <div class="container">
+    <span class="section-label">For First-Timers</span>
+    <h2 class="section-title">初めてご参加の方へ</h2>
+    <div class="section-divider"></div>
+    <div class="first-timers-body">
+      <p>
+        今回が初めてのPBC合宿という方も多くいらっしゃいます。<br>
+        どんな雰囲気なのか、何が行われるのか、不安に思うこともあるかもしれません。
+      </p>
+      <p>
+        当日は、各テーブルにTS（テーブルスタッフ）がつき、皆さまのそばでサポートいたします。<br>
+        何か分からないことがあれば、遠慮なくお声かけください。
+      </p>
+      <p>
+        また、受付の際に秀明さんとの名刺交換の機会がございます。<br>
+        名刺をお持ちの方は、ぜひご用意ください。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8. CONTACT ===== -->
+<section class="section contact-section">
+  <div class="container">
+    <span class="section-label">Contact</span>
+    <h2 class="section-title" style="text-align: center;">お問い合わせ</h2>
+    <div class="section-divider" style="margin: 0 auto 48px;"></div>
+    <p class="contact-text">
+      ご不明な点がございましたら、お申し込み時のご紹介者、<br>
+      または運営事務局までお気軽にお問い合わせください。
+    </p>
+    <p class="contact-closing">
+      4月22日、横浜大さん橋ホールで<br>
+      皆さまにお会いできることを、運営一同楽しみにしております。
+    </p>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <img src="https://esto-step.com/wp-content/themes/pbc-lp/images/footer/logo.png" alt="PBC" class="footer-logo">
+  <p class="footer-title">PBC合宿2026 | 2026.4.22 @ 横浜港大さん橋国際客船ターミナル</p>
+</footer>
+
 </body>
 </html>
