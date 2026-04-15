@@ -2024,6 +2024,19 @@ function initState() {
       if (!state.addedMembers) state.addedMembers = [];
       if (!state.memberMoves) state.memberMoves = {};
       if (!state.customIslands) state.customIslands = [];
+      // Migrate: ensure all default combo groups exist in saved state
+      const defaults = getDefaultComboGroups();
+      const allComboRefs = new Set(state.comboGroups.flat());
+      defaults.forEach(dg => {
+        const missing = dg.some(name => !allComboRefs.has(name));
+        if (missing) {
+          // Remove any partial matches first
+          dg.forEach(name => {
+            state.comboGroups = state.comboGroups.map(g => g.filter(n => n !== name)).filter(g => g.length > 0);
+          });
+          state.comboGroups.push([...dg]);
+        }
+      });
       return;
     } catch(e) {}
   }
