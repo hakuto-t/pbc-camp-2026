@@ -592,7 +592,7 @@ const DATA = {
   "islands": [
     {
       "id": 1,
-      "type": "合体島E",
+      "type": "合体島G",
       "referrers": [
         "鈴木悠資",
         "山川晃太郎"
@@ -672,7 +672,7 @@ const DATA = {
       "tsTarget": 4
     },
     {
-      "id": 4,
+      "id": 3,
       "type": "単独島",
       "referrers": [
         "川又俊治"
@@ -696,7 +696,7 @@ const DATA = {
       "tsTarget": 2
     },
     {
-      "id": 5,
+      "id": 4,
       "type": "単独島",
       "referrers": [
         "佐藤洋希"
@@ -718,7 +718,7 @@ const DATA = {
       "tsTarget": 2
     },
     {
-      "id": 6,
+      "id": 5,
       "type": "単独島",
       "referrers": [
         "寺田貴詞"
@@ -739,7 +739,7 @@ const DATA = {
       "tsTarget": 2
     },
     {
-      "id": 7,
+      "id": 6,
       "type": "単独島",
       "referrers": [
         "小田賀子"
@@ -759,7 +759,7 @@ const DATA = {
       "tsTarget": 2
     },
     {
-      "id": 8,
+      "id": 7,
       "type": "単独島",
       "referrers": [
         "杉浦司"
@@ -779,7 +779,7 @@ const DATA = {
       "tsTarget": 2
     },
     {
-      "id": 9,
+      "id": 8,
       "type": "単独島",
       "referrers": [
         "上嶋祐太"
@@ -796,7 +796,7 @@ const DATA = {
       "tsTarget": 1
     },
     {
-      "id": 10,
+      "id": 9,
       "type": "単独島",
       "referrers": [
         "大石洋"
@@ -813,7 +813,7 @@ const DATA = {
       "tsTarget": 1
     },
     {
-      "id": 11,
+      "id": 10,
       "type": "単独島",
       "referrers": [
         "津ケ谷洋"
@@ -830,7 +830,7 @@ const DATA = {
       "tsTarget": 1
     },
     {
-      "id": 12,
+      "id": 11,
       "type": "合体島A",
       "referrers": [
         "掛布篤行",
@@ -848,7 +848,7 @@ const DATA = {
       "tsTarget": 1
     },
     {
-      "id": 13,
+      "id": 12,
       "type": "合体島B",
       "referrers": [
         "梅原薫",
@@ -866,7 +866,7 @@ const DATA = {
       "tsTarget": 1
     },
     {
-      "id": 14,
+      "id": 13,
       "type": "合体島C",
       "referrers": [
         "白都卓磨",
@@ -885,7 +885,7 @@ const DATA = {
       "tsTarget": 1
     },
     {
-      "id": 15,
+      "id": 14,
       "type": "合体島D",
       "referrers": [
         "安藤悟",
@@ -904,7 +904,7 @@ const DATA = {
       "tsTarget": 1
     },
     {
-      "id": 16,
+      "id": 15,
       "type": "合体島E",
       "referrers": [
         "薗田将大",
@@ -923,7 +923,7 @@ const DATA = {
       "tsTarget": 1
     },
     {
-      "id": 17,
+      "id": 16,
       "type": "合体島F",
       "referrers": [
         "田中誠了",
@@ -1992,7 +1992,7 @@ const DATA = {
     "pgCount": 43,
     "employeeCount": 76,
     "bitCount": 5,
-    "islandCount": 17,
+    "islandCount": 16,
     "orphanNewCount": 11
   }
 };
@@ -2949,11 +2949,12 @@ function showIslandModal(island) {
     document.body.appendChild(overlay);
   }
   var refDisplay = island.referrers.map(function(r) { return orphanMap[r] ? r + '（不在）' : r; }).join('、');
-  var total = island.referrers.length + island.newCount + assignedScouts.length;
+  var presentRefs = island.referrers.filter(function(r) { return !orphanMap[r]; }).length;
+  var total = presentRefs + island.newCount + assignedScouts.length;
   var html = '<div class="modal"><button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'active\')">&times;</button>';
   html += '<h3>島' + island.id + '　' + refDisplay + '</h3>';
-  html += '<div class="modal-subtitle">合計 ' + total + '人（紹介者' + island.referrers.length + ' + 新規' + island.newCount + ' + スカウト' + assignedScouts.length + '）</div>';
-  html += '<div class="modal-section"><div class="modal-section-title">紹介者（' + island.referrers.length + '人）</div><div class="modal-member-list">';
+  html += '<div class="modal-subtitle">合計 ' + total + '人（紹介者' + presentRefs + ' + 新規' + island.newCount + ' + スカウト' + assignedScouts.length + '）</div>';
+  html += '<div class="modal-section"><div class="modal-section-title">紹介者（' + presentRefs + '人）</div><div class="modal-member-list">';
   island.referrers.forEach(function(name) {
     var cls = orphanMap[name] ? 'modal-member orphan-ref' : 'modal-member referrer';
     html += '<span class="' + cls + '">' + name + (orphanMap[name] ? ' [不在]' : '') + '</span>';
@@ -2987,10 +2988,11 @@ function showComboGroupModal(group, groupIndex) {
     document.body.appendChild(overlay);
   }
   var totalNew = 0;
-  group.forEach(function(name) { var r = getRefData(name); if (r) totalNew += r.newCount; });
+  var presentReferrers = 0;
+  group.forEach(function(name) { var r = getRefData(name); if (r) totalNew += r.newCount; if (!orphanMap[name]) presentReferrers++; });
   var html = '<div class="modal"><button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'active\')">&times;</button>';
   html += '<h3>合体グループ ' + (groupIndex + 1) + '</h3>';
-  html += '<div class="modal-subtitle">紹介者 ' + group.length + '人 / 新規 ' + totalNew + '人 / 合計 ' + (group.length + totalNew) + '人</div>';
+  html += '<div class="modal-subtitle">紹介者 ' + presentReferrers + '人 / 新規 ' + totalNew + '人 / 合計 ' + (presentReferrers + totalNew) + '人</div>';
   group.forEach(function(name) {
     var r = getRefData(name);
     if (!r) return;
