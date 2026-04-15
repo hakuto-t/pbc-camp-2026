@@ -159,6 +159,39 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Yu Gothic', 
 .save-slot .slot-delete { color:#ff3b30; font-size:12px; cursor:pointer; margin-left:12px; padding:2px 8px; border-radius:6px; }
 .save-slot .slot-delete:hover { background:#fff0f0; }
 
+/* Context menu */
+.ctx-menu { position:fixed; z-index:3000; background:#fff; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.15); padding:4px 0; min-width:160px; }
+.ctx-menu-item { padding:8px 16px; font-size:13px; cursor:pointer; }
+.ctx-menu-item:hover { background:#f0f4ff; }
+.ctx-menu-divider { height:1px; background:#e5e5ea; margin:4px 0; }
+
+/* Unassigned pool */
+.unassigned-pool { background:#fff; border:1px dashed #bbb; border-radius:12px; padding:12px 16px; margin-bottom:16px; min-height:48px; }
+.unassigned-pool.drag-over { border-color:#007aff; background:#f5f9ff; }
+
+/* Stats bar */
+.stats-bar { display:flex; gap:20px; padding:12px 24px; background:#fff; border-bottom:1px solid #d0d0d0; font-size:13px; color:#555; }
+.stats-bar .stat-value { font-weight:600; color:#1d1d1f; font-size:15px; }
+
+/* Adjustment tab */
+.adj-section-label { width:100%;font-size:13px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.04em;padding:12px 0 4px;border-bottom:1px solid #ccc;margin-top:4px; }
+.adj-island-card { background:#fff; border:1px solid #ccc; border-radius:14px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.15s; flex-shrink:0; }
+.adj-island-card.combined { background:#fff8ed; border-color:#d4c090; }
+.adj-island-card.drop-hover { border-color:#007aff; box-shadow:0 0 0 3px rgba(0,122,255,0.15); background:#f5f9ff; }
+.chip-absent { opacity:0.4; text-decoration:line-through; }
+
+/* Add member modal */
+.add-member-modal { background:#fff; border-radius:16px; padding:28px; min-width:380px; max-width:480px; box-shadow:0 16px 48px rgba(0,0,0,0.15); }
+.add-member-modal h3 { font-size:17px; font-weight:600; margin-bottom:16px; color:#1d1d1f; }
+.add-member-modal label { display:block; font-size:13px; color:#555; margin-bottom:4px; margin-top:12px; }
+.add-member-modal input, .add-member-modal select { width:100%; padding:8px 12px; border:1px solid #bbb; border-radius:10px; font-size:14px; font-family:inherit; outline:none; }
+.add-member-modal input:focus, .add-member-modal select:focus { border-color:#007aff; box-shadow:0 0 0 3px rgba(0,122,255,0.12); }
+.add-member-modal .modal-actions { display:flex; gap:8px; margin-top:18px; }
+.add-member-modal .modal-actions button { padding:10px 24px; border:none; border-radius:10px; font-size:14px; cursor:pointer; font-family:inherit; font-weight:500; }
+.add-member-modal .btn-add { background:#007aff; color:#fff; }
+.add-member-modal .btn-add:hover { background:#0066d6; }
+.add-member-modal .btn-cancel { background:#f5f5f7; color:#333; }
+
 @media print {
   .header, .tabs, .no-print { display: none !important; }
   .tab-content { display: block !important; }
@@ -185,7 +218,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Yu Gothic', 
 
 <div class="tabs no-print">
   <div class="tab active" data-tab="tab1">島組み合わせ＆スカウト配置</div>
-  <div class="tab" data-tab="tab2">全体ビュー</div>
+  <div class="tab" data-tab="tab2">実務調整</div>
   <div class="tab" data-tab="tab3">印刷用</div>
 </div>
 
@@ -214,7 +247,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Yu Gothic', 
 </div>
 
 <div id="tab2" class="tab-content">
-  <div class="overview-grid" id="overviewGrid"></div>
+  <div class="stats-bar" id="adjStatsBar"></div>
+  <div style="padding:24px;" id="adjContent"></div>
 </div>
 
 <div id="tab3" class="tab-content">
@@ -1989,11 +2023,20 @@ function initState() {
   if (saved) {
     try {
       state = JSON.parse(saved);
+      // Ensure new fields exist
+      if (!state.absentees) state.absentees = {};
+      if (!state.addedMembers) state.addedMembers = [];
+      if (!state.memberMoves) state.memberMoves = {};
+      if (!state.customIslands) state.customIslands = [];
       return;
     } catch(e) {}
   }
   state.comboGroups = getDefaultComboGroups();
   state.scoutAssignments = {};
+  state.absentees = {};
+  state.addedMembers = [];
+  state.memberMoves = {};
+  state.customIslands = [];
   rebuildIslands();
 }
 
@@ -2082,7 +2125,7 @@ function renderAll() {
   renderOrphanPool();
   renderScoutPanel();
   renderIslandGrid();
-  renderOverview();
+  renderAdjustment();
   renderPrint();
 }
 
@@ -2360,123 +2403,439 @@ function chunkArray(arr, size) {
   return chunks;
 }
 
-function renderOverview() {
-  const container = document.getElementById('overviewGrid');
-  container.innerHTML = '';
-  container.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;padding:24px;align-items:start;';
-
-  function addSectionLabel(text) {
-    var label = document.createElement('div');
-    label.style.cssText = 'width:100%;font-size:13px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.04em;padding:12px 0 4px;border-bottom:1px solid #ccc;margin-top:4px;';
-    label.textContent = text;
-    container.appendChild(label);
-  }
-
-  function personChip(name, type) {
-    var colors = {
-      referrer: 'background:#e0ecff;color:#1a3a6a;border:1px solid #a0bce0;',
-      orphanRef: 'background:#ffe8e8;color:#8a2020;border:1px solid #d09090;',
-      new: 'background:#f5f5f5;color:#333;border:1px solid #d0d0d0;',
-      ts: 'background:#e0f5e0;color:#1a5a1a;border:1px solid #90c890;',
-      pg: 'background:#f5f0e0;color:#5a4a1a;border:1px solid #c8b880;',
-      employee: 'background:#eef3ff;color:#2a3a5a;border:1px solid #b0c0d8;',
-      scout: 'background:#f0f8f0;color:#2a4a2a;border:1px solid #a0c8a0;',
+function buildAdjustedView() {
+  // 1. Deep copy islands from state
+  var adjIslands = state.islands.map(function(isl) {
+    return {
+      id: 'ref-' + isl.id,
+      label: '島' + isl.id,
+      referrers: isl.referrers.slice(),
+      type: isl.type,
+      members: [] // will be filled below
     };
-    return '<span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;margin:1px;white-space:nowrap;' + (colors[type] || colors.new) + '">' + name + '</span>';
-  }
-
-  addSectionLabel('紹介者島（' + state.islands.length + '島）');
-
-  state.islands.forEach(function(island) {
-    var assignedScouts = getAssignedScouts(island.id);
-    var totalPeople = island.referrers.length + island.newCount + assignedScouts.length;
-
-    var tile = document.createElement('div');
-    var isCombined = island.type.indexOf('合体') >= 0;
-    tile.className = 'overview-tile' + (isCombined ? ' combined' : '');
-    tile.style.cssText = 'flex-shrink:0;';
-
-    // ヘッダー
-    var html = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">';
-    html += '<h4 style="margin:0;font-size:15px;">島' + island.id + '</h4>';
-    html += '<span style="font-size:13px;color:#888;">' + totalPeople + '人</span>';
-    html += '</div>';
-
-    // 全チップを配列に集める
-    var chips = [];
-    island.referrers.forEach(function(name) {
-      var isOrph = !!orphanMap[name];
-      chips.push(personChip(isOrph ? name + '(不在)' : '★ ' + name, isOrph ? 'orphanRef' : 'referrer'));
-    });
-    island.members.forEach(function(name) {
-      chips.push(personChip(name, 'new'));
-    });
-    assignedScouts.forEach(function(name) {
-      var scout = DATA.scouts.find(function(s) { return s.name === name; });
-      var cat = scout ? scout.category : '';
-      var type = cat === 'TS' ? 'ts' : 'pg';
-      chips.push(personChip(name + ' [' + cat + ']', type));
-    });
-
-    // 2行グリッド: 列数 = ceil(chips / 2)
-    var cols = Math.ceil(chips.length / 2);
-    html += '<div style="display:grid;grid-template-rows:1fr 1fr;grid-template-columns:repeat(' + cols + ',auto);grid-auto-flow:column;gap:3px;margin-top:4px;">';
-    chips.forEach(function(c) { html += c; });
-    html += '</div>';
-
-    tile.innerHTML = html;
-    tile.addEventListener('click', function() { showIslandModal(island); });
-    container.appendChild(tile);
   });
 
-  // 未配置スカウト島（ドラッグ＆ドロップ対応）
-  var unplacedScouts = DATA.scouts.filter(function(s) { return !state.scoutAssignments[s.name]; });
-  if (unplacedScouts.length > 0) {
-    if (!state.scoutIslandGroups) {
-      state.scoutIslandGroups = chunkArray(unplacedScouts.map(function(s){ return s.name; }), 6);
-    } else {
-      var currentNames = {};
-      unplacedScouts.forEach(function(s){ currentNames[s.name] = true; });
-      state.scoutIslandGroups = state.scoutIslandGroups.map(function(g){
-        return g.filter(function(n){ return currentNames[n]; });
-      }).filter(function(g){ return g.length > 0; });
-      var inGroups = {};
-      state.scoutIslandGroups.forEach(function(g){ g.forEach(function(n){ inGroups[n]=true; }); });
-      unplacedScouts.forEach(function(s){
-        if (!inGroups[s.name]) {
-          var last = state.scoutIslandGroups[state.scoutIslandGroups.length - 1];
-          if (last && last.length < 6) last.push(s.name);
-          else state.scoutIslandGroups.push([s.name]);
-        }
-      });
-    }
+  // Build island map
+  var islandById = {};
+  adjIslands.forEach(function(isl) { islandById[isl.id] = isl; });
 
-    addSectionLabel('未配置スカウト島（' + unplacedScouts.length + '人 → ' + state.scoutIslandGroups.length + '島）');
-    renderDndIslands(container, state.scoutIslandGroups, 'scout', 'S島', '#90b880', '#f5fbf0');
+  // 2. Add referrers and new members with category info
+  state.islands.forEach(function(orig, idx) {
+    var isl = adjIslands[idx];
+    orig.referrers.forEach(function(name) {
+      isl.members.push({ name: name, category: '紹介者' });
+    });
+    orig.members.forEach(function(name) {
+      isl.members.push({ name: name, category: '新規' });
+    });
+  });
+
+  // 3. Add assigned scouts to their islands
+  Object.keys(state.scoutAssignments).forEach(function(scoutName) {
+    var islandId = state.scoutAssignments[scoutName];
+    var key = 'ref-' + islandId;
+    if (islandById[key]) {
+      var scout = DATA.scouts.find(function(s) { return s.name === scoutName; });
+      var cat = scout ? scout.category : 'TS';
+      islandById[key].members.push({ name: scoutName, category: cat });
+    }
+  });
+
+  // 4. Build scout islands from scoutIslandGroups (unassigned scouts)
+  var unplacedScouts = DATA.scouts.filter(function(s) { return !state.scoutAssignments[s.name]; });
+  if (!state.scoutIslandGroups) {
+    state.scoutIslandGroups = chunkArray(unplacedScouts.map(function(s){ return s.name; }), 6);
+  } else {
+    var currentNames = {};
+    unplacedScouts.forEach(function(s){ currentNames[s.name] = true; });
+    state.scoutIslandGroups = state.scoutIslandGroups.map(function(g){
+      return g.filter(function(n){ return currentNames[n]; });
+    }).filter(function(g){ return g.length > 0; });
+    var inGroups = {};
+    state.scoutIslandGroups.forEach(function(g){ g.forEach(function(n){ inGroups[n]=true; }); });
+    unplacedScouts.forEach(function(s){
+      if (!inGroups[s.name]) {
+        var last = state.scoutIslandGroups[state.scoutIslandGroups.length - 1];
+        if (last && last.length < 6) last.push(s.name);
+        else state.scoutIslandGroups.push([s.name]);
+      }
+    });
+  }
+  var scoutIslands = [];
+  if (state.scoutIslandGroups) {
+    state.scoutIslandGroups.forEach(function(g, gi) {
+      var members = g.map(function(name) {
+        var scout = DATA.scouts.find(function(s) { return s.name === name; });
+        return { name: name, category: scout ? scout.category : 'TS' };
+      });
+      scoutIslands.push({ id: 'scout-' + (gi+1), label: 'S島' + (gi+1), referrers: [], type: 'scout', members: members });
+    });
   }
 
-  // 社員島（ドラッグ＆ドロップ対応）
+  // 5. Build employee islands
   if (!state.employeeIslandGroups) {
     state.employeeIslandGroups = chunkArray(DATA.employees.map(function(e){ return e.name; }), 6);
   }
-  addSectionLabel('社員島（' + DATA.employees.length + '人 → ' + state.employeeIslandGroups.length + '島）');
-  renderDndIslands(container, state.employeeIslandGroups, 'employee', '社員島', '#b0c0d8', '#f5f9ff');
+  var empIslands = [];
+  state.employeeIslandGroups.forEach(function(g, gi) {
+    var members = g.map(function(name) { return { name: name, category: '社員' }; });
+    empIslands.push({ id: 'emp-' + (gi+1), label: '社員島' + (gi+1), referrers: [], type: 'employee', members: members });
+  });
 
-  // ビット
-  addSectionLabel('ビット（巡回）');
-  var bitTile = document.createElement('div');
-  bitTile.className = 'overview-tile bit';
-  bitTile.style.cssText = 'flex-shrink:0;';
+  // 6. Custom islands
+  var customIslands = [];
+  (state.customIslands || []).forEach(function(ci) {
+    var isl = { id: ci.id, label: ci.name, referrers: [], type: 'custom', members: [] };
+    islandById[ci.id] = isl;
+    customIslands.push(isl);
+  });
+
+  // Merge all islands for lookup
+  var allIslands = adjIslands.concat(scoutIslands).concat(empIslands).concat(customIslands);
+  allIslands.forEach(function(isl) { islandById[isl.id] = isl; });
+
+  // 7. Apply memberMoves
+  Object.keys(state.memberMoves || {}).forEach(function(name) {
+    var dest = state.memberMoves[name];
+    // Remove from all islands first
+    allIslands.forEach(function(isl) {
+      isl.members = isl.members.filter(function(m) { return m.name !== name; });
+    });
+    if (dest !== 'pool' && islandById[dest]) {
+      // Determine category
+      var cat = getCategoryForName(name);
+      islandById[dest].members.push({ name: name, category: cat });
+    }
+  });
+
+  // 8. Unassigned pool: addedMembers not in any island + moved-to-pool members
+  var assignedNames = {};
+  allIslands.forEach(function(isl) { isl.members.forEach(function(m) { assignedNames[m.name] = true; }); });
+
+  var unassigned = [];
+  // Added members not assigned
+  (state.addedMembers || []).forEach(function(am) {
+    if (!assignedNames[am.name]) {
+      unassigned.push({ name: am.name, category: am.category });
+    }
+  });
+  // Members moved to pool
+  Object.keys(state.memberMoves || {}).forEach(function(name) {
+    if (state.memberMoves[name] === 'pool' && !assignedNames[name]) {
+      var cat = getCategoryForName(name);
+      if (!unassigned.find(function(u) { return u.name === name; })) {
+        unassigned.push({ name: name, category: cat });
+      }
+    }
+  });
+
+  return { refIslands: adjIslands, scoutIslands: scoutIslands, empIslands: empIslands, customIslands: customIslands, allIslands: allIslands, unassigned: unassigned };
+}
+
+function getCategoryForName(name) {
+  // Check addedMembers first
+  var added = (state.addedMembers || []).find(function(am) { return am.name === name; });
+  if (added) return added.category;
+  // Check scouts
+  var scout = DATA.scouts.find(function(s) { return s.name === name; });
+  if (scout) return scout.category;
+  // Check employees
+  var emp = DATA.employees.find(function(e) { return e.name === name; });
+  if (emp) return '社員';
+  // Check referrers
+  if (referrerMap[name] || smallReferrerMap[name]) return '紹介者';
+  // Check bits
+  var bit = DATA.bits.find(function(b) { return b.name === name; });
+  if (bit) return 'ビット';
+  return '新規';
+}
+
+function memberChip(name, category, isAbsent, islandId) {
+  var colors = {
+    '紹介者': 'background:#e0ecff;color:#1a3a6a;border:1px solid #a0bce0;',
+    '新規': 'background:#f5f5f5;color:#333;border:1px solid #d0d0d0;',
+    'TS': 'background:#e0f5e0;color:#1a5a1a;border:1px solid #90c890;',
+    'PG生': 'background:#f5f0e0;color:#5a4a1a;border:1px solid #c8b880;',
+    '社員': 'background:#eef3ff;color:#2a3a5a;border:1px solid #b0c0d8;',
+    'ビット': 'background:#f8f5ff;color:#4a3a6a;border:1px solid #c0b0d8;',
+  };
+  var style = colors[category] || colors['新規'];
+  var absentStyle = isAbsent ? 'opacity:0.4;text-decoration:line-through;' : '';
+  var esc = name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+  return '<span draggable="true" data-adj-name="' + esc + '" data-adj-category="' + (category||'') + '" data-adj-island="' + (islandId||'pool') + '" ' +
+    'oncontextmenu="showContextMenu(event,\'' + esc.replace(/'/g, "\\'") + '\',\'' + (category||'').replace(/'/g, "\\'") + '\',\'' + (islandId||'pool') + '\')" ' +
+    'style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;margin:1px;white-space:nowrap;cursor:grab;' + style + absentStyle + '">' +
+    (category === '紹介者' ? '★ ' : '') + name +
+    (category && category !== '紹介者' && category !== '新規' ? ' <span style="font-size:9px;opacity:0.7">[' + category + ']</span>' : '') +
+    '</span>';
+}
+
+function showContextMenu(e, name, category, islandId) {
+  e.preventDefault();
+  e.stopPropagation();
+  // Remove existing
+  var old = document.getElementById('ctxMenu');
+  if (old) old.remove();
+
+  var menu = document.createElement('div');
+  menu.id = 'ctxMenu';
+  menu.className = 'ctx-menu';
+  menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+  menu.style.top = Math.min(e.clientY, window.innerHeight - 150) + 'px';
+
+  var isAbsent = !!(state.absentees && state.absentees[name]);
+
+  // Toggle absent
+  var absentItem = document.createElement('div');
+  absentItem.className = 'ctx-menu-item';
+  absentItem.textContent = isAbsent ? '欠席解除' : '欠席にする';
+  absentItem.addEventListener('click', function() {
+    if (isAbsent) delete state.absentees[name];
+    else state.absentees[name] = true;
+    saveState(); renderAdjustment(); menu.remove();
+  });
+  menu.appendChild(absentItem);
+
+  // Remove from island (move to pool)
+  if (islandId && islandId !== 'pool') {
+    var divider = document.createElement('div');
+    divider.className = 'ctx-menu-divider';
+    menu.appendChild(divider);
+    var removeItem = document.createElement('div');
+    removeItem.className = 'ctx-menu-item';
+    removeItem.textContent = '島から外す（未配置へ）';
+    removeItem.addEventListener('click', function() {
+      state.memberMoves[name] = 'pool';
+      saveState(); renderAdjustment(); menu.remove();
+    });
+    menu.appendChild(removeItem);
+  }
+
+  // Move to pool reset (if moved)
+  if (state.memberMoves && state.memberMoves[name]) {
+    var divider2 = document.createElement('div');
+    divider2.className = 'ctx-menu-divider';
+    menu.appendChild(divider2);
+    var resetItem = document.createElement('div');
+    resetItem.className = 'ctx-menu-item';
+    resetItem.textContent = '移動をリセット';
+    resetItem.addEventListener('click', function() {
+      delete state.memberMoves[name];
+      saveState(); renderAdjustment(); menu.remove();
+    });
+    menu.appendChild(resetItem);
+  }
+
+  document.body.appendChild(menu);
+  setTimeout(function() {
+    document.addEventListener('click', function handler() {
+      var m = document.getElementById('ctxMenu');
+      if (m) m.remove();
+      document.removeEventListener('click', handler);
+    });
+  }, 50);
+}
+
+function showAddMemberDialog() {
+  var overlay = document.getElementById('addMemberOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'addMemberOverlay';
+    overlay.className = 'modal-overlay';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('active'); });
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = '<div class="add-member-modal">' +
+    '<h3>メンバー追加</h3>' +
+    '<label>名前（必須）</label><input type="text" id="addMemberName" placeholder="名前を入力...">' +
+    '<label>区分</label><select id="addMemberCategory"><option value="新規">新規</option><option value="TS">TS</option><option value="PG生">PG生</option><option value="社員">社員</option></select>' +
+    '<label>紹介者（任意）</label><input type="text" id="addMemberReferrer" placeholder="紹介者名...">' +
+    '<div class="modal-actions"><button class="btn-add" onclick="doAddMember()">追加</button><button class="btn-cancel" onclick="document.getElementById(\'addMemberOverlay\').classList.remove(\'active\')">キャンセル</button></div>' +
+    '</div>';
+  overlay.classList.add('active');
+  setTimeout(function() { document.getElementById('addMemberName').focus(); }, 100);
+}
+
+function doAddMember() {
+  var name = document.getElementById('addMemberName').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  var category = document.getElementById('addMemberCategory').value;
+  var referrer = document.getElementById('addMemberReferrer').value.trim();
+  if (!state.addedMembers) state.addedMembers = [];
+  state.addedMembers.push({ name: name, category: category, referrer: referrer });
+  saveState();
+  document.getElementById('addMemberOverlay').classList.remove('active');
+  renderAdjustment();
+}
+
+function addCustomIsland() {
+  if (!state.customIslands) state.customIslands = [];
+  var id = 'c' + (state.customIslands.length + 1);
+  state.customIslands.push({ id: id, name: '追加島' + (state.customIslands.length + 1) });
+  saveState();
+  renderAdjustment();
+}
+
+function renderAdjustment() {
+  var view = buildAdjustedView();
+  var statsBar = document.getElementById('adjStatsBar');
+  var container = document.getElementById('adjContent');
+  container.innerHTML = '';
+
+  // Stats
+  var totalAll = 0;
+  var totalAssigned = 0;
+  var totalAbsent = Object.keys(state.absentees || {}).length;
+  view.allIslands.forEach(function(isl) { totalAll += isl.members.length; totalAssigned += isl.members.length; });
+  totalAll += view.unassigned.length;
+  statsBar.innerHTML = '<div>全員 <span class="stat-value">' + totalAll + '人</span></div>' +
+    '<div>配置済み <span class="stat-value">' + totalAssigned + '人</span></div>' +
+    '<div>未配置 <span class="stat-value">' + view.unassigned.length + '人</span></div>' +
+    '<div>欠席 <span class="stat-value">' + totalAbsent + '人</span></div>';
+
+  // Unassigned pool
+  var poolHeader = document.createElement('div');
+  poolHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+  poolHeader.innerHTML = '<span style="font-size:13px;font-weight:600;color:#555;">未配置プール</span>' +
+    '<button onclick="showAddMemberDialog()" style="padding:5px 14px;border:1px solid #007aff;color:#007aff;background:#fff;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">＋ メンバー追加</button>';
+  container.appendChild(poolHeader);
+
+  var pool = document.createElement('div');
+  pool.className = 'unassigned-pool';
+  pool.id = 'adjPool';
+  if (view.unassigned.length === 0) {
+    pool.innerHTML = '<span style="font-size:12px;color:#999;">未配置のメンバーはいません</span>';
+  } else {
+    view.unassigned.forEach(function(m) {
+      pool.innerHTML += memberChip(m.name, m.category, !!(state.absentees && state.absentees[m.name]), 'pool');
+    });
+  }
+  // Drop target for pool
+  pool.addEventListener('dragover', function(e) { e.preventDefault(); pool.classList.add('drag-over'); });
+  pool.addEventListener('dragleave', function() { pool.classList.remove('drag-over'); });
+  pool.addEventListener('drop', function(e) {
+    e.preventDefault(); pool.classList.remove('drag-over');
+    var name = e.dataTransfer.getData('text/adj-name');
+    if (!name) return;
+    state.memberMoves[name] = 'pool';
+    saveState(); renderAdjustment();
+  });
+  // Dragstart delegation
+  pool.addEventListener('dragstart', function(e) {
+    var el = e.target;
+    if (el.dataset && el.dataset.adjName) {
+      e.dataTransfer.setData('text/adj-name', el.dataset.adjName);
+      e.dataTransfer.setData('text/adj-from', 'pool');
+    }
+  });
+  container.appendChild(pool);
+
+  function addSectionLabel(text, extra) {
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+    var label = document.createElement('div');
+    label.className = 'adj-section-label';
+    label.textContent = text;
+    label.style.cssText += 'flex:1;';
+    div.appendChild(label);
+    if (extra) div.appendChild(extra);
+    container.appendChild(div);
+  }
+
+  function renderIslandCards(islands, sectionLabel, extraBtn) {
+    addSectionLabel(sectionLabel, extraBtn || null);
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;align-items:start;margin-bottom:8px;';
+    islands.forEach(function(isl) {
+      var card = document.createElement('div');
+      card.className = 'adj-island-card' + (isl.type === 'combined' ? ' combined' : '');
+      var activeCount = isl.members.filter(function(m) { return !state.absentees[m.name]; }).length;
+
+      var html = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">';
+      html += '<h4 style="margin:0;font-size:14px;">' + isl.label + '</h4>';
+      html += '<span style="font-size:12px;color:#888;">' + activeCount + '人</span></div>';
+
+      // 2-row grid chips
+      var chipHtml = [];
+      isl.members.forEach(function(m) {
+        chipHtml.push(memberChip(m.name, m.category, !!(state.absentees && state.absentees[m.name]), isl.id));
+      });
+      if (chipHtml.length > 0) {
+        var cols = Math.ceil(chipHtml.length / 2);
+        html += '<div style="display:grid;grid-template-rows:1fr 1fr;grid-template-columns:repeat(' + cols + ',auto);grid-auto-flow:column;gap:3px;">';
+        chipHtml.forEach(function(c) { html += c; });
+        html += '</div>';
+      } else {
+        html += '<div style="font-size:12px;color:#999;padding:8px;">メンバーなし</div>';
+      }
+
+      card.innerHTML = html;
+
+      // Drop target
+      card.addEventListener('dragover', function(e) { e.preventDefault(); card.classList.add('drop-hover'); });
+      card.addEventListener('dragleave', function(e) { if (!card.contains(e.relatedTarget)) card.classList.remove('drop-hover'); });
+      card.addEventListener('drop', function(e) {
+        e.preventDefault(); card.classList.remove('drop-hover');
+        var name = e.dataTransfer.getData('text/adj-name');
+        if (!name) return;
+        state.memberMoves[name] = isl.id;
+        saveState(); renderAdjustment();
+      });
+      // Dragstart delegation
+      card.addEventListener('dragstart', function(e) {
+        var el = e.target;
+        if (el.dataset && el.dataset.adjName) {
+          e.dataTransfer.setData('text/adj-name', el.dataset.adjName);
+          e.dataTransfer.setData('text/adj-from', isl.id);
+        }
+      });
+
+      wrap.appendChild(card);
+    });
+    container.appendChild(wrap);
+  }
+
+  // Referrer islands
+  renderIslandCards(view.refIslands, '紹介者島（' + view.refIslands.length + '島）');
+
+  // Scout islands
+  if (view.scoutIslands.length > 0) {
+    renderIslandCards(view.scoutIslands, 'スカウト島（' + view.scoutIslands.length + '島）');
+  }
+
+  // Employee islands
+  renderIslandCards(view.empIslands, '社員島（' + view.empIslands.length + '島）');
+
+  // Custom islands
+  if (view.customIslands.length > 0) {
+    renderIslandCards(view.customIslands, '追加島（' + view.customIslands.length + '島）');
+  }
+
+  // Add island button
+  var addBtn = document.createElement('button');
+  addBtn.textContent = '＋ 新しい島を追加';
+  addBtn.style.cssText = 'padding:8px 18px;border:1px dashed #007aff;color:#007aff;background:#fff;border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit;margin-top:8px;';
+  addBtn.addEventListener('click', addCustomIsland);
+  container.appendChild(addBtn);
+
+  // Bit section
+  var bitLabel = document.createElement('div');
+  bitLabel.className = 'adj-section-label';
+  bitLabel.textContent = 'ビット（巡回）';
+  container.appendChild(bitLabel);
+  var bitWrap = document.createElement('div');
+  bitWrap.className = 'adj-island-card';
+  bitWrap.style.cssText += 'background:#f8f5ff;border-color:#c0b0d8;';
   var bHtml = '<h4 style="font-size:13px;margin-bottom:6px;">ビット（巡回）</h4>';
   var bChips = [];
-  DATA.bits.forEach(function(b) { bChips.push(personChip(b.name, 'scout')); });
+  DATA.bits.forEach(function(b) { bChips.push(memberChip(b.name, 'ビット', !!(state.absentees && state.absentees[b.name]), 'bit')); });
   var bCols = Math.ceil(bChips.length / 2) || 1;
   bHtml += '<div style="display:grid;grid-template-rows:1fr 1fr;grid-template-columns:repeat(' + bCols + ',auto);grid-auto-flow:column;gap:3px;">';
   bChips.forEach(function(c) { bHtml += c; });
   bHtml += '</div>';
   bHtml += '<div style="font-size:11px;color:#888;margin-top:4px;">※島に固定しない</div>';
-  bitTile.innerHTML = bHtml;
-  container.appendChild(bitTile);
+  bitWrap.innerHTML = bHtml;
+  container.appendChild(bitWrap);
 }
 
 function draggableChip(name, type, dragType, groupIndex) {
@@ -2561,7 +2920,7 @@ function renderDndIslands(container, groups, type, labelPrefix, borderColor, bgC
       else grps.push([name]);
 
       saveState();
-      renderOverview();
+      renderAdjustment();
     });
 
     container.appendChild(tile);
@@ -2683,30 +3042,54 @@ function showEmployeeTooltip(event, emp) {
 }
 
 function renderPrint() {
-  const container = document.getElementById('printArea');
-  let html = '<div class="print-title">PBC合宿2026 席割り配置表</div>';
-  html += '<table class="print-table"><tr><th>島#</th><th>紹介者</th><th>新規人数</th><th>新規メンバー</th><th>スカウトTS</th><th>合計</th></tr>';
+  var container = document.getElementById('printArea');
+  var view = buildAdjustedView();
+  var html = '<div class="print-title">PBC合宿2026 席割り配置表</div>';
+  html += '<table class="print-table"><tr><th>島</th><th>区分</th><th>人数</th><th>メンバー</th></tr>';
 
-  state.islands.forEach(island => {
-    const assignedScouts = getAssignedScouts(island.id);
-    const refs = island.referrers.map(name => {
-      const isOrph = !!orphanMap[name];
-      return isOrph ? name + '(不在)' : name;
+  function formatMembers(members) {
+    return members.map(function(m) {
+      var absent = state.absentees && state.absentees[m.name];
+      var display = m.name;
+      if (m.category && m.category !== '新規' && m.category !== '紹介者') display += '[' + m.category + ']';
+      if (m.category === '紹介者') display = '★' + display;
+      if (absent) display = '<s style="opacity:0.5">' + display + '</s>';
+      return display;
     }).join('、');
-    const membersStr = island.members.join('、');
-    const scoutsStr = assignedScouts.join('、');
-    const total = island.referrers.length + island.newCount + assignedScouts.length;
-    html += '<tr>';
-    html += '<td style="text-align:center;font-weight:600;">' + island.id + '</td>';
-    html += '<td>' + refs + '</td>';
-    html += '<td style="text-align:center;">' + island.newCount + '</td>';
-    html += '<td class="print-members">' + membersStr + '</td>';
-    html += '<td class="print-members">' + (scoutsStr || '—') + '</td>';
-    html += '<td style="text-align:center;">' + total + '</td>';
-    html += '</tr>';
-  });
+  }
+
+  function renderIslandRows(islands) {
+    islands.forEach(function(isl) {
+      var activeMembers = isl.members.filter(function(m) { return !state.absentees[m.name]; });
+      html += '<tr>';
+      html += '<td style="text-align:center;font-weight:600;">' + isl.label + '</td>';
+      html += '<td>' + (isl.type || '') + '</td>';
+      html += '<td style="text-align:center;">' + activeMembers.length + '</td>';
+      html += '<td class="print-members">' + formatMembers(isl.members) + '</td>';
+      html += '</tr>';
+    });
+  }
+
+  renderIslandRows(view.refIslands);
+  if (view.scoutIslands.length > 0) renderIslandRows(view.scoutIslands);
+  renderIslandRows(view.empIslands);
+  if (view.customIslands.length > 0) renderIslandRows(view.customIslands);
 
   html += '</table>';
+
+  // Unassigned section
+  if (view.unassigned.length > 0) {
+    html += '<div class="print-title" style="margin-top:12px;">未配置メンバー（' + view.unassigned.length + '人）</div>';
+    html += '<div class="print-members">' + formatMembers(view.unassigned) + '</div>';
+  }
+
+  // Bits
+  html += '<div class="print-title" style="margin-top:12px;">ビット（巡回）</div>';
+  html += '<div class="print-members">' + DATA.bits.map(function(b) {
+    var absent = state.absentees && state.absentees[b.name];
+    return absent ? '<s style="opacity:0.5">' + b.name + '</s>' : b.name;
+  }).join('、') + '</div>';
+
   container.innerHTML = html;
 }
 
@@ -2793,7 +3176,11 @@ function doSave() {
     comboGroups: state.comboGroups,
     scoutAssignments: state.scoutAssignments,
     scoutIslandGroups: state.scoutIslandGroups,
-    employeeIslandGroups: state.employeeIslandGroups
+    employeeIslandGroups: state.employeeIslandGroups,
+    absentees: state.absentees || {},
+    addedMembers: state.addedMembers || [],
+    memberMoves: state.memberMoves || {},
+    customIslands: state.customIslands || []
   };
   // 同名があれば上書き
   var idx = slots.findIndex(function(s) { return s.name === name; });
@@ -2845,6 +3232,10 @@ function doLoad(index) {
   if (slot.scoutAssignments) state.scoutAssignments = slot.scoutAssignments;
   if (slot.scoutIslandGroups) state.scoutIslandGroups = slot.scoutIslandGroups;
   if (slot.employeeIslandGroups) state.employeeIslandGroups = slot.employeeIslandGroups;
+  state.absentees = slot.absentees || {};
+  state.addedMembers = slot.addedMembers || [];
+  state.memberMoves = slot.memberMoves || {};
+  state.customIslands = slot.customIslands || [];
   rebuildIslands();
   saveState();
   renderAll();
