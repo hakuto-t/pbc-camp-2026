@@ -1,0 +1,2869 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PBC合宿2026 席割り配置ツール</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Yu Gothic', 'YuGothic', sans-serif; background: #f7f7f7; color: #1d1d1f; -webkit-font-smoothing: antialiased; letter-spacing: 0.01em; }
+
+/* Header */
+.header { background: #1a1a2e; color: #fff; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 18px; font-weight: 500; letter-spacing: 0.04em; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.save-indicator { font-size: 12px; color: rgba(255,255,255,0.6); }
+.save-indicator.unsaved { color: #ff6b6b; }
+.btn { padding: 7px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; background: rgba(255,255,255,0.15); color: #fff; transition: all 0.15s; font-weight: 500; }
+.btn:hover { background: rgba(255,255,255,0.25); }
+.btn-danger { background: rgba(231,76,60,0.85); }
+.btn-danger:hover { background: rgba(231,76,60,1); }
+.btn-primary { background: rgba(41,128,185,0.85); }
+.btn-primary:hover { background: rgba(41,128,185,1); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; padding: 0 24px; background: #fff; border-bottom: 1px solid #d0d0d0; }
+.tab { padding: 14px 24px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; color: #777; font-weight: 500; transition: color 0.15s; }
+.tab:hover { color: #1d1d1f; }
+.tab.active { color: #1d1d1f; border-bottom-color: #1d1d1f; }
+
+/* Tab content */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Tab1 Layout */
+.tab1-layout { display: flex; flex-direction: column; height: calc(100vh - 200px); }
+.scout-area { border-bottom: 2px solid #ddd; background: #fff; flex-shrink: 0; overflow-y: auto; max-height: 40vh; }
+.island-panel { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
+
+/* Combination area */
+.combination-area { background: #fff; border-bottom: 1px solid #d0d0d0; padding: 16px 24px; }
+.combination-area h3 { font-size: 13px; margin-bottom: 10px; color: #555; font-weight: 500; }
+.combo-groups { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.combo-group { border: 1.5px dashed #aaa; border-radius: 10px; padding: 6px 8px; min-width: 100px; min-height: 40px; background: #fafafa; display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; transition: all 0.15s; }
+.combo-group.drag-over { border-color: #007aff; background: #f0f5ff; }
+.combo-group.warning { border-color: #ff3b30; background: #fff5f5; }
+.combo-group-label { font-size: 9px; color: #888; width: 100%; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.05em; }
+.combo-chip { background: #fff; border: 1px solid #bbb; border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: grab; user-select: none; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: all 0.15s; }
+.combo-chip:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.combo-chip:active { cursor: grabbing; }
+.combo-chip .new-count { color: #555; font-size: 11px; margin-left: 4px; }
+.combo-chip.orphan { background: #fff0f0; border-color: #d08080; }
+.combo-new-group { border: 1.5px dashed #c7c7cc; border-radius: 12px; padding: 10px; min-width: 90px; min-height: 50px; display: flex; align-items: center; justify-content: center; color: #888; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.combo-new-group.drag-over { border-color: #007aff; background: #f0f5ff; }
+.combo-total { font-size: 10px; color: #555; width: 100%; text-align: right; }
+
+/* Orphan pool */
+.orphan-pool { background: #fff; border-bottom: 1px solid #d0d0d0; padding: 12px 24px; }
+.orphan-pool h3 { font-size: 13px; margin-bottom: 8px; color: #ff3b30; font-weight: 500; }
+.orphan-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.orphan-chip { background: #fff5f5; border: 1px solid #e0a0a0; border-radius: 8px; padding: 5px 12px; font-size: 13px; cursor: grab; user-select: none; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: all 0.15s; }
+.orphan-chip:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.orphan-chip:active { cursor: grabbing; }
+.orphan-chip .orphan-label { color: #ff3b30; font-size: 10px; margin-left: 4px; }
+.orphan-chip .new-count { color: #555; font-size: 11px; margin-left: 4px; }
+.orphan-chip.placed { opacity: 0.35; }
+
+/* Scout area (horizontal chip layout) */
+.scout-header { padding: 12px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #d0d0d0; }
+.scout-header h3 { font-size: 14px; white-space: nowrap; font-weight: 500; color: #1d1d1f; }
+.scout-search { width: 260px; padding: 8px 12px; border: 1px solid #bbb; border-radius: 10px; font-size: 13px; font-family: inherit; background: #f5f5f7; outline: none; transition: all 0.15s; }
+.scout-search:focus { border-color: #007aff; background: #fff; box-shadow: 0 0 0 3px rgba(0,122,255,0.12); }
+.scout-body { padding: 10px 24px; }
+.scout-group { margin-bottom: 10px; }
+.scout-group-label { font-size: 12px; font-weight: 500; color: #555; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+.scout-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.scout-item { padding: 5px 12px; border: 1px solid #bbb; border-radius: 8px; font-size: 13px; cursor: grab; user-select: none; display: inline-flex; align-items: center; gap: 6px; background: #fff; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: all 0.15s; }
+.scout-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-color: #007aff; }
+.scout-item.placed { opacity: 0.3; background: #f5f5f7; box-shadow: none; }
+.scout-item .badge { background: #0a0a0a; color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 6px; font-weight: 500; }
+.scout-item:active { cursor: grabbing; transform: scale(0.97); }
+.unplaced-count { font-size: 12px; color: #ff3b30; font-weight: 500; }
+.scout-item.ts-type { border-color: #8aa8c8; background: #f8faff; }
+.scout-item.pg-type { border-color: #90b880; background: #f8fcf5; }
+
+/* Island cards */
+.island-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 14px; }
+.island-card { background: #fff; border: 1px solid #ccc; border-radius: 14px; padding: 18px; cursor: pointer; transition: all 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.island-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.island-card.combined { background: #fff8ed; border-color: #d4c090; }
+.island-card.drop-hover { border-color: #007aff; box-shadow: 0 0 0 3px rgba(0,122,255,0.15); background: #f5f9ff; }
+.island-card.combined.drop-hover { background: #fdf8ee; }
+.island-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.island-number { font-size: 20px; font-weight: 700; color: #000; }
+.island-referrers { font-size: 15px; color: #222; font-weight: 500; }
+.island-stats { display: flex; gap: 14px; font-size: 13px; color: #333; margin-bottom: 10px; }
+.progress-bar { height: 6px; background: #e5e5ea; border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
+.progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.progress-fill.red { background: #ff3b30; }
+.progress-fill.yellow { background: #ff9500; }
+.progress-fill.green { background: #34c759; }
+.island-drop-zone { min-height: 32px; border: 1px dashed #d2d2d7; border-radius: 10px; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.island-drop-zone-label { font-size: 12px; color: #999; width: 100%; }
+.ts-chip { background: #f0f4ff; border: 1px solid #8ab0d0; border-radius: 8px; padding: 4px 10px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: all 0.1s; }
+.ts-chip:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.ts-chip .remove { cursor: pointer; color: #888; font-weight: bold; font-size: 15px; line-height: 1; }
+.ts-chip .remove:hover { color: #ff3b30; }
+
+/* Tab2 - Overview */
+.overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; padding: 24px; }
+.overview-tile { background: #fff; border: 1px solid #ccc; border-radius: 14px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.15s; cursor: pointer; }
+.overview-tile:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.overview-tile.combined { background: #fff8ed; border-color: #d4c090; }
+.overview-tile.employee { background: #f5f9ff; border-color: #c4d4e8; }
+.overview-tile.bit { background: #f8f5ff; border-color: #ccc0e0; }
+.overview-tile h4 { font-size: 16px; margin-bottom: 6px; font-weight: 600; color: #1d1d1f; }
+.overview-tile .info { font-size: 14px; color: #444; line-height: 1.8; }
+.overview-tile .ratio { font-size: 15px; font-weight: 600; color: #1d1d1f; }
+
+/* Tab3 - Print */
+.print-area { padding: 16px; }
+.print-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+.print-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+.print-table th, .print-table td { border: 1px solid #aaa; padding: 2px 6px; font-size: 11px; text-align: left; vertical-align: top; }
+.print-table th { background: #1a1a2e; color: #fff; font-size: 10px; padding: 3px 6px; }
+.print-island-header td { background: #e8e8e8; font-weight: 600; font-size: 11px; padding: 3px 6px; }
+.print-members { font-size: 10px; line-height: 1.5; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.active { display: flex; }
+.modal { background: #fff; border-radius: 16px; padding: 28px; min-width: 420px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.15); }
+.modal h3 { font-size: 18px; margin-bottom: 4px; color: #1d1d1f; font-weight: 600; }
+.modal .modal-subtitle { font-size: 13px; color: #555; margin-bottom: 18px; }
+.modal-close { float: right; cursor: pointer; font-size: 20px; color: #888; background: #f5f5f7; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.modal-close:hover { background: #e5e5ea; color: #1d1d1f; }
+.modal-section { margin-bottom: 16px; }
+.modal-section-title { font-size: 12px; font-weight: 500; color: #555; padding-bottom: 6px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #f2f2f7; }
+.modal-member-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.modal-member { padding: 4px 12px; border-radius: 8px; font-size: 13px; background: #f5f5f7; border: none; }
+.modal-member.referrer { background: #e8f0fe; font-weight: 600; }
+.modal-member.orphan-ref { background: #fff0f0; }
+.modal-member.ts { background: #e8f8e8; }
+.modal-member.pg { background: #f5f0e0; }
+
+.save-dialog-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.3); backdrop-filter:blur(4px); z-index:2000; justify-content:center; align-items:center; }
+.save-dialog-overlay.active { display:flex; }
+.save-dialog { background:#fff; border-radius:16px; padding:28px; min-width:400px; max-width:500px; max-height:80vh; overflow-y:auto; box-shadow:0 16px 48px rgba(0,0,0,0.15); }
+.save-dialog h3 { font-size:17px; font-weight:600; margin-bottom:16px; color:#1d1d1f; }
+.save-dialog input[type=text] { width:100%; padding:10px 14px; border:1px solid #bbb; border-radius:10px; font-size:14px; font-family:inherit; margin-bottom:12px; outline:none; }
+.save-dialog input[type=text]:focus { border-color:#007aff; box-shadow:0 0 0 3px rgba(0,122,255,0.12); }
+.save-dialog .save-btn { padding:10px 24px; background:#007aff; color:#fff; border:none; border-radius:10px; font-size:14px; cursor:pointer; font-family:inherit; font-weight:500; }
+.save-dialog .save-btn:hover { background:#0066d6; }
+.save-dialog .cancel-btn { padding:10px 24px; background:#f5f5f7; color:#333; border:none; border-radius:10px; font-size:14px; cursor:pointer; font-family:inherit; margin-left:8px; }
+.save-list { margin-top:12px; }
+.save-slot { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border:1px solid #e0e0e0; border-radius:10px; margin-bottom:6px; cursor:pointer; transition:all 0.1s; }
+.save-slot:hover { background:#f5f9ff; border-color:#007aff; }
+.save-slot .slot-name { font-weight:500; font-size:14px; }
+.save-slot .slot-time { font-size:12px; color:#888; }
+.save-slot .slot-delete { color:#ff3b30; font-size:12px; cursor:pointer; margin-left:12px; padding:2px 8px; border-radius:6px; }
+.save-slot .slot-delete:hover { background:#fff0f0; }
+
+@media print {
+  .header, .tabs, .no-print { display: none !important; }
+  .tab-content { display: block !important; }
+  #tab3 { display: block !important; }
+  #tab1, #tab2 { display: none !important; }
+  .print-table { break-inside: avoid; page-break-inside: avoid; }
+  @page { size: A4 landscape; margin: 10mm; }
+  body { background: #fff; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PBC合宿2026 席割り配置ツール</h1>
+  <div class="header-right">
+    <span class="save-indicator" id="saveIndicator">保存済み</span>
+    <button class="btn" onclick="showSaveDialog()">名前を付けて保存</button>
+    <button class="btn" onclick="showLoadDialog()">保存データを呼び出し</button>
+    <button class="btn btn-primary" onclick="copyToClipboard()">コピー</button>
+    <button class="btn btn-danger" onclick="resetAll()">リセット</button>
+  </div>
+</div>
+
+<div class="tabs no-print">
+  <div class="tab active" data-tab="tab1">島組み合わせ＆スカウト配置</div>
+  <div class="tab" data-tab="tab2">全体ビュー</div>
+  <div class="tab" data-tab="tab3">印刷用</div>
+</div>
+
+<div id="tab1" class="tab-content active">
+  <div class="combination-area no-print" id="comboArea">
+    <h3>小島の組み合わせ（ドラッグで移動 / 合計6人以上推奨）</h3>
+    <div class="combo-groups" id="comboGroups"></div>
+  </div>
+  <div class="orphan-pool no-print" id="orphanPool">
+    <h3>紹介者不在の新規メンバー（ドラッグで島グループに移動可）</h3>
+    <div class="orphan-chips" id="orphanChips"></div>
+  </div>
+  <div class="tab1-layout">
+    <div class="scout-area" id="scoutPanel">
+      <div class="scout-header">
+        <h3>スカウトリスト</h3>
+        <input type="text" class="scout-search" id="scoutSearch" placeholder="名前で検索...">
+        <span class="unplaced-count" id="scoutUnplacedCount"></span>
+      </div>
+      <div class="scout-body" id="scoutList"></div>
+    </div>
+    <div class="island-panel" id="islandPanel">
+      <div class="island-grid" id="islandGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tab2" class="tab-content">
+  <div class="overview-grid" id="overviewGrid"></div>
+</div>
+
+<div id="tab3" class="tab-content">
+  <div class="print-area" id="printArea"></div>
+</div>
+
+<script>
+const DATA = {
+  "referrers": [
+    {
+      "name": "鈴木悠資",
+      "newCount": 22,
+      "total": 23,
+      "members": [
+        "若松杏",
+        "西村 匡史",
+        "鈴木佳典",
+        "鳥居克啓",
+        "三谷 公一",
+        "中村将義",
+        "伊藤浩二",
+        "八木 邦明",
+        "内田翔",
+        "北川 晴也",
+        "大橋弘毅",
+        "小和田雄一",
+        "山下素子",
+        "山内萌斗",
+        "山本 達巳",
+        "平田 陽亮",
+        "武信行紀",
+        "江塚諭",
+        "粟田 嶺",
+        "金田 聡",
+        "鈴木 基文",
+        "飯島 悠貴"
+      ]
+    },
+    {
+      "name": "米森良偉",
+      "newCount": 21,
+      "total": 22,
+      "members": [
+        "三宅早菜恵",
+        "上條篤史",
+        "中谷圭吾",
+        "五十嵐悠介",
+        "佐藤 晃一",
+        "出野 裕士",
+        "北薗 寛人カルロ",
+        "吉岡就平",
+        "吉村 高彦",
+        "小嶋崇文",
+        "小松 寛",
+        "山口 成彰",
+        "岩田聡太",
+        "市岡歩夢",
+        "竹山尊斗",
+        "脇崇",
+        "辻田 敬介",
+        "鈴木直人",
+        "長島 晴希",
+        "飯島 佑介",
+        "高遠 健太"
+      ]
+    },
+    {
+      "name": "山川晃太郎",
+      "newCount": 13,
+      "total": 14,
+      "members": [
+        "吉新 信二",
+        "安藤小百合",
+        "岡田 亮多",
+        "木村 翔",
+        "松本 夢",
+        "橋本 峻邦",
+        "海老原 勝信",
+        "海老原 夏美",
+        "船田勝太",
+        "谷中良平",
+        "野沢周平",
+        "野沢風太",
+        "馬橋海樹"
+      ]
+    },
+    {
+      "name": "川又俊治",
+      "newCount": 12,
+      "total": 13,
+      "members": [
+        "伊藤 利彦",
+        "佐原忠典",
+        "塩田 雄基",
+        "島田 隆行",
+        "植野 公太",
+        "横岡 摂樹",
+        "相樂佳祐",
+        "福田 修一",
+        "藤田義智",
+        "長山優",
+        "長谷川博夫",
+        "高橋 邑伍"
+      ]
+    },
+    {
+      "name": "佐藤洋希",
+      "newCount": 10,
+      "total": 11,
+      "members": [
+        "倉橋 俊輔",
+        "加藤綾香",
+        "古本 健二",
+        "大井剰慈",
+        "天野洋平",
+        "後藤 岳彦",
+        "田中孝宜",
+        "白山聖浩",
+        "益木 宏康",
+        "飯塚 圭二"
+      ]
+    },
+    {
+      "name": "寺田貴詞",
+      "newCount": 9,
+      "total": 10,
+      "members": [
+        "三島 騎羅",
+        "中島響",
+        "千見寺 拓実",
+        "島田エル",
+        "戸越 裕介",
+        "梅田貴彦",
+        "池田 大和",
+        "池田正和",
+        "西澤尚美"
+      ]
+    },
+    {
+      "name": "小田賀子",
+      "newCount": 8,
+      "total": 9,
+      "members": [
+        "中尾 欽哉",
+        "北原詩織",
+        "大江 広満",
+        "大石 秀斗",
+        "村山 恭平",
+        "森木 亮",
+        "田中俊平",
+        "袴田 学"
+      ]
+    },
+    {
+      "name": "杉浦司",
+      "newCount": 8,
+      "total": 9,
+      "members": [
+        "伊藤 美穂子",
+        "内田 努",
+        "小野 哲郎",
+        "山口 玲偉",
+        "山本 悠",
+        "山本 真基",
+        "市橋穂南",
+        "畑田 智幸"
+      ]
+    },
+    {
+      "name": "上嶋祐太",
+      "newCount": 5,
+      "total": 6,
+      "members": [
+        "加藤 大貴",
+        "田邉良介",
+        "菊地夕子",
+        "藤井 賢吾",
+        "遠山 真麻"
+      ]
+    },
+    {
+      "name": "大石洋",
+      "newCount": 5,
+      "total": 6,
+      "members": [
+        "大西悠貴",
+        "森田尊久",
+        "横尾 直樹",
+        "谷川 義和",
+        "鎌田 侑"
+      ]
+    },
+    {
+      "name": "津ケ谷洋",
+      "newCount": 5,
+      "total": 6,
+      "members": [
+        "河合俊輔",
+        "船津 麻理子",
+        "落合時夫",
+        "金子 公人",
+        "鈴木 翔生"
+      ]
+    },
+    {
+      "name": "掛布篤行",
+      "newCount": 4,
+      "total": 5,
+      "members": [
+        "伊井田 峰士",
+        "勝俣俊哉",
+        "岸川 悦也",
+        "福田 翔平"
+      ]
+    },
+    {
+      "name": "梅原薫",
+      "newCount": 4,
+      "total": 5,
+      "members": [
+        "伊東飛樹",
+        "梅原和久",
+        "繁本 卓澄",
+        "高田佳宏"
+      ]
+    },
+    {
+      "name": "安藤悟",
+      "newCount": 3,
+      "total": 4,
+      "members": [
+        "加藤 良太",
+        "河原崎 幸之介",
+        "田畑峻幸"
+      ]
+    },
+    {
+      "name": "白都卓磨",
+      "newCount": 3,
+      "total": 4,
+      "members": [
+        "伊熊玲於",
+        "北村 智明",
+        "白出 将基"
+      ]
+    },
+    {
+      "name": "福田正英",
+      "newCount": 3,
+      "total": 4,
+      "members": [
+        "中村 哲",
+        "小林浩之",
+        "泉 裕介"
+      ]
+    },
+    {
+      "name": "薄井健介",
+      "newCount": 3,
+      "total": 4,
+      "members": [
+        "佐野秀樹",
+        "倉松宗道",
+        "成塚賢一"
+      ]
+    },
+    {
+      "name": "薗田将大",
+      "newCount": 2,
+      "total": 3,
+      "members": [
+        "松本遼太",
+        "野中啓佑"
+      ]
+    },
+    {
+      "name": "鈴木和弘",
+      "newCount": 2,
+      "total": 3,
+      "members": [
+        "宮澤 諒太",
+        "横井智哉"
+      ]
+    },
+    {
+      "name": "中村功尚",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "山本 潤平"
+      ]
+    },
+    {
+      "name": "松原崇晋",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "渡邉 栞"
+      ]
+    },
+    {
+      "name": "田中孝太郎",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "田丸 誠"
+      ]
+    },
+    {
+      "name": "田中誠了",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "山中 洸武"
+      ]
+    },
+    {
+      "name": "関根美雪",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "中村 尚美"
+      ]
+    },
+    {
+      "name": "鳥尾忠永",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "西村 隆宏"
+      ]
+    }
+  ],
+  "islands": [
+    {
+      "id": 1,
+      "type": "単独島",
+      "referrers": [
+        "鈴木悠資"
+      ],
+      "newCount": 22,
+      "total": 23,
+      "members": [
+        "若松杏",
+        "西村 匡史",
+        "鈴木佳典",
+        "鳥居克啓",
+        "三谷 公一",
+        "中村将義",
+        "伊藤浩二",
+        "八木 邦明",
+        "内田翔",
+        "北川 晴也",
+        "大橋弘毅",
+        "小和田雄一",
+        "山下素子",
+        "山内萌斗",
+        "山本 達巳",
+        "平田 陽亮",
+        "武信行紀",
+        "江塚諭",
+        "粟田 嶺",
+        "金田 聡",
+        "鈴木 基文",
+        "飯島 悠貴"
+      ],
+      "tsTarget": 5
+    },
+    {
+      "id": 2,
+      "type": "単独島",
+      "referrers": [
+        "米森良偉"
+      ],
+      "newCount": 21,
+      "total": 22,
+      "members": [
+        "三宅早菜恵",
+        "上條篤史",
+        "中谷圭吾",
+        "五十嵐悠介",
+        "佐藤 晃一",
+        "出野 裕士",
+        "北薗 寛人カルロ",
+        "吉岡就平",
+        "吉村 高彦",
+        "小嶋崇文",
+        "小松 寛",
+        "山口 成彰",
+        "岩田聡太",
+        "市岡歩夢",
+        "竹山尊斗",
+        "脇崇",
+        "辻田 敬介",
+        "鈴木直人",
+        "長島 晴希",
+        "飯島 佑介",
+        "高遠 健太"
+      ],
+      "tsTarget": 4
+    },
+    {
+      "id": 3,
+      "type": "単独島",
+      "referrers": [
+        "山川晃太郎"
+      ],
+      "newCount": 13,
+      "total": 14,
+      "members": [
+        "吉新 信二",
+        "安藤小百合",
+        "岡田 亮多",
+        "木村 翔",
+        "松本 夢",
+        "橋本 峻邦",
+        "海老原 勝信",
+        "海老原 夏美",
+        "船田勝太",
+        "谷中良平",
+        "野沢周平",
+        "野沢風太",
+        "馬橋海樹"
+      ],
+      "tsTarget": 3
+    },
+    {
+      "id": 4,
+      "type": "単独島",
+      "referrers": [
+        "川又俊治"
+      ],
+      "newCount": 12,
+      "total": 13,
+      "members": [
+        "伊藤 利彦",
+        "佐原忠典",
+        "塩田 雄基",
+        "島田 隆行",
+        "植野 公太",
+        "横岡 摂樹",
+        "相樂佳祐",
+        "福田 修一",
+        "藤田義智",
+        "長山優",
+        "長谷川博夫",
+        "高橋 邑伍"
+      ],
+      "tsTarget": 2
+    },
+    {
+      "id": 5,
+      "type": "単独島",
+      "referrers": [
+        "佐藤洋希"
+      ],
+      "newCount": 10,
+      "total": 11,
+      "members": [
+        "倉橋 俊輔",
+        "加藤綾香",
+        "古本 健二",
+        "大井剰慈",
+        "天野洋平",
+        "後藤 岳彦",
+        "田中孝宜",
+        "白山聖浩",
+        "益木 宏康",
+        "飯塚 圭二"
+      ],
+      "tsTarget": 2
+    },
+    {
+      "id": 6,
+      "type": "単独島",
+      "referrers": [
+        "寺田貴詞"
+      ],
+      "newCount": 9,
+      "total": 10,
+      "members": [
+        "三島 騎羅",
+        "中島響",
+        "千見寺 拓実",
+        "島田エル",
+        "戸越 裕介",
+        "梅田貴彦",
+        "池田 大和",
+        "池田正和",
+        "西澤尚美"
+      ],
+      "tsTarget": 2
+    },
+    {
+      "id": 7,
+      "type": "単独島",
+      "referrers": [
+        "小田賀子"
+      ],
+      "newCount": 8,
+      "total": 9,
+      "members": [
+        "中尾 欽哉",
+        "北原詩織",
+        "大江 広満",
+        "大石 秀斗",
+        "村山 恭平",
+        "森木 亮",
+        "田中俊平",
+        "袴田 学"
+      ],
+      "tsTarget": 2
+    },
+    {
+      "id": 8,
+      "type": "単独島",
+      "referrers": [
+        "杉浦司"
+      ],
+      "newCount": 8,
+      "total": 9,
+      "members": [
+        "伊藤 美穂子",
+        "内田 努",
+        "小野 哲郎",
+        "山口 玲偉",
+        "山本 悠",
+        "山本 真基",
+        "市橋穂南",
+        "畑田 智幸"
+      ],
+      "tsTarget": 2
+    },
+    {
+      "id": 9,
+      "type": "単独島",
+      "referrers": [
+        "上嶋祐太"
+      ],
+      "newCount": 5,
+      "total": 6,
+      "members": [
+        "加藤 大貴",
+        "田邉良介",
+        "菊地夕子",
+        "藤井 賢吾",
+        "遠山 真麻"
+      ],
+      "tsTarget": 1
+    },
+    {
+      "id": 10,
+      "type": "単独島",
+      "referrers": [
+        "大石洋"
+      ],
+      "newCount": 5,
+      "total": 6,
+      "members": [
+        "大西悠貴",
+        "森田尊久",
+        "横尾 直樹",
+        "谷川 義和",
+        "鎌田 侑"
+      ],
+      "tsTarget": 1
+    },
+    {
+      "id": 11,
+      "type": "単独島",
+      "referrers": [
+        "津ケ谷洋"
+      ],
+      "newCount": 5,
+      "total": 6,
+      "members": [
+        "河合俊輔",
+        "船津 麻理子",
+        "落合時夫",
+        "金子 公人",
+        "鈴木 翔生"
+      ],
+      "tsTarget": 1
+    },
+    {
+      "id": 12,
+      "type": "合体島A",
+      "referrers": [
+        "掛布篤行",
+        "鳥尾忠永"
+      ],
+      "newCount": 5,
+      "total": 7,
+      "members": [
+        "伊井田 峰士",
+        "勝俣俊哉",
+        "岸川 悦也",
+        "福田 翔平",
+        "西村 隆宏"
+      ],
+      "tsTarget": 1
+    },
+    {
+      "id": 13,
+      "type": "合体島B",
+      "referrers": [
+        "梅原薫",
+        "田中孝太郎"
+      ],
+      "newCount": 5,
+      "total": 7,
+      "members": [
+        "伊東飛樹",
+        "梅原和久",
+        "繁本 卓澄",
+        "高田佳宏",
+        "田丸 誠"
+      ],
+      "tsTarget": 1
+    },
+    {
+      "id": 14,
+      "type": "合体島C",
+      "referrers": [
+        "白都卓磨",
+        "福田正英"
+      ],
+      "newCount": 6,
+      "total": 8,
+      "members": [
+        "伊熊玲於",
+        "北村 智明",
+        "白出 将基",
+        "中村 哲",
+        "小林浩之",
+        "泉 裕介"
+      ],
+      "tsTarget": 1
+    },
+    {
+      "id": 15,
+      "type": "合体島D",
+      "referrers": [
+        "安藤悟",
+        "薄井健介"
+      ],
+      "newCount": 6,
+      "total": 8,
+      "members": [
+        "加藤 良太",
+        "河原崎 幸之介",
+        "田畑峻幸",
+        "佐野秀樹",
+        "倉松宗道",
+        "成塚賢一"
+      ],
+      "tsTarget": 1
+    },
+    {
+      "id": 16,
+      "type": "合体島E",
+      "referrers": [
+        "薗田将大",
+        "鈴木和弘",
+        "中村功尚"
+      ],
+      "newCount": 5,
+      "total": 8,
+      "members": [
+        "松本遼太",
+        "野中啓佑",
+        "宮澤 諒太",
+        "横井智哉",
+        "山本 潤平"
+      ],
+      "tsTarget": 1
+    },
+    {
+      "id": 17,
+      "type": "合体島F",
+      "referrers": [
+        "田中誠了",
+        "関根美雪",
+        "松原崇晋"
+      ],
+      "newCount": 3,
+      "total": 6,
+      "members": [
+        "山中 洸武",
+        "中村 尚美",
+        "渡邉 栞"
+      ],
+      "tsTarget": 1
+    }
+  ],
+  "smallReferrers": [
+    {
+      "name": "掛布篤行",
+      "newCount": 4,
+      "total": 5,
+      "members": [
+        "伊井田 峰士",
+        "勝俣俊哉",
+        "岸川 悦也",
+        "福田 翔平"
+      ]
+    },
+    {
+      "name": "梅原薫",
+      "newCount": 4,
+      "total": 5,
+      "members": [
+        "伊東飛樹",
+        "梅原和久",
+        "繁本 卓澄",
+        "高田佳宏"
+      ]
+    },
+    {
+      "name": "安藤悟",
+      "newCount": 3,
+      "total": 4,
+      "members": [
+        "加藤 良太",
+        "河原崎 幸之介",
+        "田畑峻幸"
+      ]
+    },
+    {
+      "name": "白都卓磨",
+      "newCount": 3,
+      "total": 4,
+      "members": [
+        "伊熊玲於",
+        "北村 智明",
+        "白出 将基"
+      ]
+    },
+    {
+      "name": "福田正英",
+      "newCount": 3,
+      "total": 4,
+      "members": [
+        "中村 哲",
+        "小林浩之",
+        "泉 裕介"
+      ]
+    },
+    {
+      "name": "薄井健介",
+      "newCount": 3,
+      "total": 4,
+      "members": [
+        "佐野秀樹",
+        "倉松宗道",
+        "成塚賢一"
+      ]
+    },
+    {
+      "name": "薗田将大",
+      "newCount": 2,
+      "total": 3,
+      "members": [
+        "松本遼太",
+        "野中啓佑"
+      ]
+    },
+    {
+      "name": "鈴木和弘",
+      "newCount": 2,
+      "total": 3,
+      "members": [
+        "宮澤 諒太",
+        "横井智哉"
+      ]
+    },
+    {
+      "name": "中村功尚",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "山本 潤平"
+      ]
+    },
+    {
+      "name": "松原崇晋",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "渡邉 栞"
+      ]
+    },
+    {
+      "name": "田中孝太郎",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "田丸 誠"
+      ]
+    },
+    {
+      "name": "田中誠了",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "山中 洸武"
+      ]
+    },
+    {
+      "name": "関根美雪",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "中村 尚美"
+      ]
+    },
+    {
+      "name": "鳥尾忠永",
+      "newCount": 1,
+      "total": 2,
+      "members": [
+        "西村 隆宏"
+      ]
+    }
+  ],
+  "orphans": [
+    {
+      "name": "大岡成光（ビット巡回のため不在）",
+      "referrerName": "大岡成光",
+      "newCount": 4,
+      "total": 4,
+      "members": [
+        "三輪千晶",
+        "増山 大寿",
+        "平野純一",
+        "松濱和幸"
+      ],
+      "isOrphan": true
+    },
+    {
+      "name": "林拓未（ビット巡回のため不在）",
+      "referrerName": "林拓未",
+      "newCount": 1,
+      "total": 1,
+      "members": [
+        "仲根雅人"
+      ],
+      "isOrphan": true
+    },
+    {
+      "name": "横山敬子（ビット巡回のため不在）",
+      "referrerName": "横山敬子",
+      "newCount": 2,
+      "total": 2,
+      "members": [
+        "小山 弘子",
+        "松尾 貴子"
+      ],
+      "isOrphan": true
+    },
+    {
+      "name": "小澤千春（不参加のため不在）",
+      "referrerName": "小澤千春",
+      "newCount": 1,
+      "total": 1,
+      "members": [
+        "関根 美雪"
+      ],
+      "isOrphan": true
+    },
+    {
+      "name": "紹介者不明（紹介者情報なし）",
+      "referrerName": "紹介者不明",
+      "newCount": 3,
+      "total": 3,
+      "members": [
+        "伊藤紀幸",
+        "堀越弘也",
+        "松山辰海"
+      ],
+      "isOrphan": true
+    }
+  ],
+  "scouts": [
+    {
+      "name": "佐藤祐希",
+      "yomi": "サトウ ユウキ",
+      "category": "PG生"
+    },
+    {
+      "name": "友野 行晴",
+      "yomi": "トモノ ユキハル",
+      "category": "PG生"
+    },
+    {
+      "name": "大井 悠平",
+      "yomi": "オオイ ユウヘイ",
+      "category": "PG生"
+    },
+    {
+      "name": "富田恵梨華",
+      "yomi": "トミタエリカ",
+      "category": "PG生"
+    },
+    {
+      "name": "村山 卓也",
+      "yomi": "ムラヤマ タクヤ",
+      "category": "PG生"
+    },
+    {
+      "name": "鵜飼玲奈",
+      "yomi": "ウカイレイナ",
+      "category": "PG生"
+    },
+    {
+      "name": "青柳伊織",
+      "yomi": "アオヤナギイオリ",
+      "category": "PG生"
+    },
+    {
+      "name": "唐仁原 健太",
+      "yomi": "トウジンバラ ケンタ",
+      "category": "PG生"
+    },
+    {
+      "name": "渡部 雄太",
+      "yomi": "ワタナベ ユウタ",
+      "category": "PG生"
+    },
+    {
+      "name": "重村 鷹隼",
+      "yomi": "シゲムラ ヨウジュン",
+      "category": "PG生"
+    },
+    {
+      "name": "長沼俊一",
+      "yomi": "ナガヌマシュンイチ",
+      "category": "PG生"
+    },
+    {
+      "name": "梅原沙織",
+      "yomi": "ウメハラサオリ",
+      "category": "PG生"
+    },
+    {
+      "name": "永井 俊司",
+      "yomi": "ナガイ シュンジ",
+      "category": "PG生"
+    },
+    {
+      "name": "和田真理",
+      "yomi": "ワダマリ",
+      "category": "PG生"
+    },
+    {
+      "name": "胡内義和",
+      "yomi": "コウチヨシカズ",
+      "category": "PG生"
+    },
+    {
+      "name": "内田 周平",
+      "yomi": "ウチダ シュウヘイ",
+      "category": "PG生"
+    },
+    {
+      "name": "井口恵丞",
+      "yomi": "イグチ ケイスケ",
+      "category": "PG生"
+    },
+    {
+      "name": "早乙女 典子",
+      "yomi": "ソウトメ ノリコ",
+      "category": "PG生"
+    },
+    {
+      "name": "三山大智",
+      "yomi": "ミヤマダイチ",
+      "category": "PG生"
+    },
+    {
+      "name": "佐久間 誠也",
+      "yomi": "サクマ セイヤ",
+      "category": "PG生"
+    },
+    {
+      "name": "大泉梓",
+      "yomi": "オオイズミ アズサ",
+      "category": "PG生"
+    },
+    {
+      "name": "小坂 将史",
+      "yomi": "コサカ マサシ",
+      "category": "PG生"
+    },
+    {
+      "name": "田尾栄樹",
+      "yomi": "タオヒデキ",
+      "category": "PG生"
+    },
+    {
+      "name": "増田 祐美",
+      "yomi": "マスダ ユミ",
+      "category": "PG生"
+    },
+    {
+      "name": "酒井 之明",
+      "yomi": "サカイ ノブアキ",
+      "category": "PG生"
+    },
+    {
+      "name": "杉山 慎",
+      "yomi": "スギヤマ マコト",
+      "category": "PG生"
+    },
+    {
+      "name": "渡邉洋平",
+      "yomi": "ワタナベヨウヘイ",
+      "category": "PG生"
+    },
+    {
+      "name": "杉本直人",
+      "yomi": "スギモトナオト",
+      "category": "PG生"
+    },
+    {
+      "name": "大﨑翔太",
+      "yomi": "オオサキショウタ",
+      "category": "PG生"
+    },
+    {
+      "name": "岩﨑崇",
+      "yomi": "イワサキ タカシ",
+      "category": "PG生"
+    },
+    {
+      "name": "大場弘貴",
+      "yomi": "オオバヒロキ",
+      "category": "PG生"
+    },
+    {
+      "name": "鈴木 祐樹",
+      "yomi": "スズキ ユウキ",
+      "category": "PG生"
+    },
+    {
+      "name": "永井 佳佑",
+      "yomi": "ナガイ ケイスケ",
+      "category": "PG生"
+    },
+    {
+      "name": "大石 悠",
+      "yomi": "オオイシ ユウ",
+      "category": "PG生"
+    },
+    {
+      "name": "戸塚治夫",
+      "yomi": "トヅカハルオ",
+      "category": "PG生"
+    },
+    {
+      "name": "鈴木 諭",
+      "yomi": "スズキ サトシ",
+      "category": "PG生"
+    },
+    {
+      "name": "太田 喜貴",
+      "yomi": "オオタ ヨシキ",
+      "category": "PG生"
+    },
+    {
+      "name": "成島司",
+      "yomi": "ナルシマツカサ",
+      "category": "PG生"
+    },
+    {
+      "name": "望月琢矢",
+      "yomi": "モチヅキタクヤ",
+      "category": "PG生"
+    },
+    {
+      "name": "迫間 亮太",
+      "yomi": "ハザマ リョウタ",
+      "category": "PG生"
+    },
+    {
+      "name": "川合 康仁",
+      "yomi": "カワイ ヤスヒト",
+      "category": "PG生"
+    },
+    {
+      "name": "鈴木健司",
+      "yomi": "スズキケンジ",
+      "category": "PG生"
+    },
+    {
+      "name": "下大澤志保",
+      "yomi": "シモオオサワシホ",
+      "category": "PG生"
+    },
+    {
+      "name": "井土利恵",
+      "yomi": "イヅチリエ",
+      "category": "TS"
+    },
+    {
+      "name": "内山 淳",
+      "yomi": "ウチヤマ ジュン",
+      "category": "TS"
+    },
+    {
+      "name": "出口 裕樹",
+      "yomi": "デグチ ユウキ",
+      "category": "TS"
+    },
+    {
+      "name": "古谷田 高穂",
+      "yomi": "コヤタ タカホ",
+      "category": "TS"
+    },
+    {
+      "name": "吉松 京介",
+      "yomi": "ヨシマツ キョウスケ",
+      "category": "TS"
+    },
+    {
+      "name": "地主直樹",
+      "yomi": "ジヌシナオキ",
+      "category": "TS"
+    },
+    {
+      "name": "増山健太",
+      "yomi": "マシヤマケンタ",
+      "category": "TS"
+    },
+    {
+      "name": "外山直紀",
+      "yomi": "トヤマナオキ",
+      "category": "TS"
+    },
+    {
+      "name": "大和田温之",
+      "yomi": "オオワダハルユキ",
+      "category": "TS"
+    },
+    {
+      "name": "大塚 祥仁",
+      "yomi": "オオツカ ヨシヒト",
+      "category": "TS"
+    },
+    {
+      "name": "安立 誓徒",
+      "yomi": "アダチ チカト",
+      "category": "TS"
+    },
+    {
+      "name": "市村 智",
+      "yomi": "イチムラ サトル",
+      "category": "TS"
+    },
+    {
+      "name": "杉山卓麻",
+      "yomi": "スギヤマタクマ",
+      "category": "TS"
+    },
+    {
+      "name": "白井 稔宏",
+      "yomi": "シライ トシヒロ",
+      "category": "TS"
+    },
+    {
+      "name": "石井楓",
+      "yomi": "イシイカエデ",
+      "category": "TS"
+    },
+    {
+      "name": "福上 大輝",
+      "yomi": "フクガミ タイキ",
+      "category": "TS"
+    },
+    {
+      "name": "福上 玲央",
+      "yomi": "フクガミ レオ",
+      "category": "TS"
+    },
+    {
+      "name": "竹本 大一",
+      "yomi": "タケモト ダイイチ",
+      "category": "TS"
+    },
+    {
+      "name": "須山 将光",
+      "yomi": "スヤマ マサミツ",
+      "category": "TS"
+    },
+    {
+      "name": "齋藤 奈津美",
+      "yomi": "サイトウ ナツミ",
+      "category": "TS"
+    },
+    {
+      "name": "大高旭",
+      "yomi": "オオタカアサヒ",
+      "category": "TS"
+    },
+    {
+      "name": "寺内 希",
+      "yomi": "テラウチ ノゾミ",
+      "category": "TS"
+    },
+    {
+      "name": "武石幸大",
+      "yomi": "タケイシコウタ",
+      "category": "TS"
+    },
+    {
+      "name": "佐藤 公亮",
+      "yomi": "サトウコウスケ",
+      "category": "TS"
+    },
+    {
+      "name": "村松昭吾",
+      "yomi": "ムラマツショウゴ",
+      "category": "TS"
+    },
+    {
+      "name": "竹村英一郎",
+      "yomi": "タケムラエイイチロ",
+      "category": "TS"
+    },
+    {
+      "name": "斎 尚道",
+      "yomi": "サイ ナオミチ",
+      "category": "TS"
+    },
+    {
+      "name": "秦 則夫",
+      "yomi": "ハタ ノリオ",
+      "category": "TS"
+    },
+    {
+      "name": "清水久美",
+      "yomi": "シミズクミ",
+      "category": "TS"
+    },
+    {
+      "name": "齋藤幸一",
+      "yomi": "サイトウコウイチ",
+      "category": "TS"
+    },
+    {
+      "name": "竹内綾香",
+      "yomi": "タケウチアヤカ",
+      "category": "TS"
+    }
+  ],
+  "employees": [
+    {
+      "name": "小林 未佳",
+      "yomi": "コバヤシ ミカ",
+      "referrer": "",
+      "role": "幹部"
+    },
+    {
+      "name": "池田 憲玄",
+      "yomi": "イケダ カズヒロ",
+      "referrer": "",
+      "role": "営業"
+    },
+    {
+      "name": "石野祐太朗",
+      "yomi": "イシノユウタロウ",
+      "referrer": "白都卓磨",
+      "role": "係長"
+    },
+    {
+      "name": "相馬幸代",
+      "yomi": "ソウマ ユキヨ",
+      "referrer": "上嶋祐太",
+      "role": "社員"
+    },
+    {
+      "name": "梶原祥平",
+      "yomi": "カジハラショウヘイ",
+      "referrer": "佐藤洋希",
+      "role": "営業部長"
+    },
+    {
+      "name": "舛島 貴志",
+      "yomi": "マスジマ アツシ",
+      "referrer": "出口裕樹",
+      "role": "営業部課長"
+    },
+    {
+      "name": "山中 祥弘",
+      "yomi": "ヤマナカ ヨシヒロ",
+      "referrer": "友野行晴",
+      "role": "主任"
+    },
+    {
+      "name": "森 和宏",
+      "yomi": "モリ カズヒロ",
+      "referrer": "友野行晴",
+      "role": "主任"
+    },
+    {
+      "name": "藤原 昌彦",
+      "yomi": "フジワラ マサヒコ",
+      "referrer": "友野行晴",
+      "role": "部長"
+    },
+    {
+      "name": "猪俣 樹",
+      "yomi": "イノマタ シゲル",
+      "referrer": "地主直樹",
+      "role": "店長"
+    },
+    {
+      "name": "野口 蓮",
+      "yomi": "ノグチ レン",
+      "referrer": "地主直樹",
+      "role": "店長"
+    },
+    {
+      "name": "仙石 敏裕",
+      "yomi": "センゴク トシヒロ",
+      "referrer": "大塚祥仁",
+      "role": "エリアマネジャー"
+    },
+    {
+      "name": "倉橋 城二",
+      "yomi": "クラハシ ジョウジ",
+      "referrer": "大塚祥仁",
+      "role": "浜松エリアマネジャー"
+    },
+    {
+      "name": "北田 希美子",
+      "yomi": "キタダ キミコ",
+      "referrer": "大塚祥仁",
+      "role": "一般社員"
+    },
+    {
+      "name": "安藤 侑史",
+      "yomi": "アンドウ ユウジ",
+      "referrer": "大岡成光",
+      "role": "なし"
+    },
+    {
+      "name": "神尾 聡志",
+      "yomi": "カミオ サトシ",
+      "referrer": "大岡成光",
+      "role": "一般社員"
+    },
+    {
+      "name": "福田 憲之",
+      "yomi": "フクダ ノリユキ",
+      "referrer": "大岡成光",
+      "role": "社員"
+    },
+    {
+      "name": "風能由貴子",
+      "yomi": "フウノユキコ",
+      "referrer": "大岡成光",
+      "role": "社員"
+    },
+    {
+      "name": "森山裕子",
+      "yomi": "モリヤマ ユウコ",
+      "referrer": "大石洋",
+      "role": "総務リーダー"
+    },
+    {
+      "name": "福島太一朗",
+      "yomi": "フクシマタイチロウ",
+      "referrer": "大石洋",
+      "role": "無し"
+    },
+    {
+      "name": "船越隆太郎",
+      "yomi": "フナコシ リュウタロウ",
+      "referrer": "大石洋",
+      "role": "ドライバーリーダー"
+    },
+    {
+      "name": "葛城雅志",
+      "yomi": "カツラギ マサシ",
+      "referrer": "大石洋",
+      "role": "株 大石鋼業社員 構内リーダー"
+    },
+    {
+      "name": "木南光義",
+      "yomi": "キナミミツヨシ",
+      "referrer": "寺田貴詞",
+      "role": "寺田貴詞 社員"
+    },
+    {
+      "name": "末吉 修也",
+      "yomi": "スエヨシ シュウヤ",
+      "referrer": "寺田貴詞",
+      "role": "マネージャー"
+    },
+    {
+      "name": "福永拓巳",
+      "yomi": "フクナガ タクミ",
+      "referrer": "寺田貴詞",
+      "role": "マネージャー"
+    },
+    {
+      "name": "稻垣 裕太",
+      "yomi": "イナガキ ユウタ",
+      "referrer": "寺田貴詞",
+      "role": "マネージャー"
+    },
+    {
+      "name": "島 由貴",
+      "yomi": "シマ ユキ",
+      "referrer": "小田賀子",
+      "role": "社員"
+    },
+    {
+      "name": "古川 美代子",
+      "yomi": "フルカワ ミヨコ",
+      "referrer": "山川晃太郎",
+      "role": "リーダー"
+    },
+    {
+      "name": "荒井 敏雄",
+      "yomi": "アライ トシオ",
+      "referrer": "山川晃太郎",
+      "role": "マネージャー"
+    },
+    {
+      "name": "青木 拳斗",
+      "yomi": "アオキ ケント",
+      "referrer": "山川晃太郎",
+      "role": "チーフ"
+    },
+    {
+      "name": "髙橋 千晶",
+      "yomi": "タカハシ チアキ",
+      "referrer": "山川晃太郎",
+      "role": "リーダー"
+    },
+    {
+      "name": "高橋 雄太",
+      "yomi": "タカハシ ユウタ",
+      "referrer": "川又俊治",
+      "role": "専務取締役"
+    },
+    {
+      "name": "大関 正",
+      "yomi": "オオゼキ タダシ",
+      "referrer": "掛布篤行",
+      "role": "相談役"
+    },
+    {
+      "name": "池田 有加里",
+      "yomi": "イケダ ユカリ",
+      "referrer": "掛布篤行",
+      "role": "リーダー"
+    },
+    {
+      "name": "福富 薫",
+      "yomi": "フクトミ カオル",
+      "referrer": "掛布篤行",
+      "role": "広報・マーケティング担当"
+    },
+    {
+      "name": "芦川 祐太",
+      "yomi": "アシカワ ユウタ",
+      "referrer": "掛布篤行",
+      "role": "CTO"
+    },
+    {
+      "name": "佐藤 貴弥",
+      "yomi": "サトウ タカヤ",
+      "referrer": "杉浦司",
+      "role": "一般社員"
+    },
+    {
+      "name": "大沢 若菜",
+      "yomi": "オオサワ ワカナ",
+      "referrer": "杉浦司",
+      "role": "一般社員"
+    },
+    {
+      "name": "山本 佳乃子",
+      "yomi": "ヤマモト カノコ",
+      "referrer": "杉浦司",
+      "role": "一般社員"
+    },
+    {
+      "name": "杉浦 希昌",
+      "yomi": "スギウラ キヨシ",
+      "referrer": "杉浦司",
+      "role": "一般社員"
+    },
+    {
+      "name": "田中 剛",
+      "yomi": "タナカ ツヨシ",
+      "referrer": "杉浦司",
+      "role": "一般社員"
+    },
+    {
+      "name": "眞野 希昇",
+      "yomi": "マノ キショウ",
+      "referrer": "杉浦司",
+      "role": "一般社員"
+    },
+    {
+      "name": "佐野 隼規",
+      "yomi": "サノ シュンキ",
+      "referrer": "梅原薫",
+      "role": "設計部"
+    },
+    {
+      "name": "堀真人",
+      "yomi": "ホリマサト",
+      "referrer": "梅原薫",
+      "role": "リーダー"
+    },
+    {
+      "name": "堤 友邦",
+      "yomi": "ツツミ ユウホ",
+      "referrer": "梅原薫",
+      "role": "現場監督リーダー"
+    },
+    {
+      "name": "成澤悠斗",
+      "yomi": "ナルサワユウト",
+      "referrer": "梅原薫",
+      "role": "一般社員"
+    },
+    {
+      "name": "渡邊 郁夫",
+      "yomi": "ワタナベイクオ",
+      "referrer": "梅原薫",
+      "role": "無し"
+    },
+    {
+      "name": "田中 千夏",
+      "yomi": "タナカ チナツ",
+      "referrer": "梅原薫",
+      "role": "IC部リーダー"
+    },
+    {
+      "name": "石垣 明日海",
+      "yomi": "イシガキ アスミ",
+      "referrer": "梅原薫",
+      "role": "営業部リーダー"
+    },
+    {
+      "name": "久保 朋美",
+      "yomi": "クボ トモミ",
+      "referrer": "横山敬子",
+      "role": "リーダー"
+    },
+    {
+      "name": "佐々木 由美",
+      "yomi": "ササキ　ユミ",
+      "referrer": "横山敬子",
+      "role": "マネージャー"
+    },
+    {
+      "name": "小川 晴子",
+      "yomi": "オガワ ハルコ",
+      "referrer": "横山敬子",
+      "role": "マネージャー"
+    },
+    {
+      "name": "竹口 薫",
+      "yomi": "タケグチ カオル",
+      "referrer": "横山敬子",
+      "role": "リーダー"
+    },
+    {
+      "name": "大石貴之",
+      "yomi": "オオイシタカユキ",
+      "referrer": "永井俊司",
+      "role": "営業"
+    },
+    {
+      "name": "渥美耀平",
+      "yomi": "アツミヨウヘイ",
+      "referrer": "田中誠了",
+      "role": "社員"
+    },
+    {
+      "name": "大峰佑月",
+      "yomi": "オオミネユヅキ",
+      "referrer": "白都卓磨",
+      "role": "係長"
+    },
+    {
+      "name": "宇田身江子",
+      "yomi": "ウダミエコ",
+      "referrer": "白都卓磨",
+      "role": "課長"
+    },
+    {
+      "name": "寺田結音",
+      "yomi": "テラダユイネ",
+      "referrer": "白都卓磨",
+      "role": "一般"
+    },
+    {
+      "name": "小林 直希",
+      "yomi": "コバヤシ ナオキ",
+      "referrer": "白都卓磨",
+      "role": "一般"
+    },
+    {
+      "name": "川島隆義",
+      "yomi": "カワシマタカヨシ",
+      "referrer": "白都卓磨",
+      "role": "課長"
+    },
+    {
+      "name": "森下周太郎",
+      "yomi": "モリシタシュウタロウ",
+      "referrer": "白都卓磨",
+      "role": "課長"
+    },
+    {
+      "name": "橋本浩平",
+      "yomi": "ハシモトコウヘイ",
+      "referrer": "白都卓磨",
+      "role": "係長"
+    },
+    {
+      "name": "水野萌",
+      "yomi": "ミズノモエ",
+      "referrer": "白都卓磨",
+      "role": "係長"
+    },
+    {
+      "name": "田中康太",
+      "yomi": "タナカコウタ",
+      "referrer": "白都卓磨",
+      "role": "係長"
+    },
+    {
+      "name": "袴田晴久",
+      "yomi": "ハカマタハルヒサ",
+      "referrer": "白都卓磨",
+      "role": "店長"
+    },
+    {
+      "name": "青島 怜史",
+      "yomi": "アオシマ サトシ",
+      "referrer": "白都卓磨",
+      "role": "係長"
+    },
+    {
+      "name": "信重亮太",
+      "yomi": "ノブシゲリョウタ",
+      "referrer": "竹村英一郎",
+      "role": "スタイリスト"
+    },
+    {
+      "name": "南條将志",
+      "yomi": "ナンジョウマサシ",
+      "referrer": "竹村英一郎",
+      "role": "COO"
+    },
+    {
+      "name": "齋藤 勇作",
+      "yomi": "サイトウ ユウサク",
+      "referrer": "薄井健介",
+      "role": "幹部"
+    },
+    {
+      "name": "小澤秀太",
+      "yomi": "オザワシュウタ",
+      "referrer": "薗田将大",
+      "role": "部長"
+    },
+    {
+      "name": "高嶺篤史",
+      "yomi": "タカミネアツシ",
+      "referrer": "薗田将大",
+      "role": "部長"
+    },
+    {
+      "name": "和田 匡平",
+      "yomi": "ワダ キョウヘイ",
+      "referrer": "鈴木悠資",
+      "role": "取締役"
+    },
+    {
+      "name": "杉原 亜里沙",
+      "yomi": "スギハラ アリサ",
+      "referrer": "鈴木悠資",
+      "role": "人事"
+    },
+    {
+      "name": "松下 壮太",
+      "yomi": "マツシタ ソウタ",
+      "referrer": "鈴木悠資",
+      "role": "コンサル"
+    },
+    {
+      "name": "羽沼 雅人",
+      "yomi": "ハヌマ マサト",
+      "referrer": "須山将光",
+      "role": "課長"
+    },
+    {
+      "name": "岩田 工",
+      "yomi": "イワタ タクミ",
+      "referrer": "齋藤奈津美",
+      "role": "課長"
+    }
+  ],
+  "bits": [
+    {
+      "name": "塙 雄貴",
+      "yomi": "ハナワ ユウキ",
+      "category": "ビット"
+    },
+    {
+      "name": "横山 敬子",
+      "yomi": "ヨコヤマ ケイコ",
+      "category": "ビット"
+    },
+    {
+      "name": "大岡成光",
+      "yomi": "オオオカマサミツ",
+      "category": "ビット"
+    },
+    {
+      "name": "林 拓未",
+      "yomi": "ハヤシタクミ",
+      "category": "ビット"
+    },
+    {
+      "name": "米津 里奈",
+      "yomi": "ヨネヅ リナ",
+      "category": "ピット"
+    }
+  ],
+  "stats": {
+    "totalPeople": 338,
+    "newCount": 159,
+    "tsCount": 31,
+    "pgCount": 43,
+    "employeeCount": 76,
+    "bitCount": 5,
+    "islandCount": 17,
+    "orphanNewCount": 11
+  }
+};
+
+const STORAGE_KEY = 'pbc2026_seating_v3';
+
+// Big referrers (standalone islands)
+const smallReferrerMap = {};
+DATA.smallReferrers.forEach(r => { smallReferrerMap[r.name] = r; });
+const referrerMap = {};
+DATA.referrers.forEach(r => { referrerMap[r.name] = r; });
+const orphanMap = {};
+if (DATA.orphans) {
+  DATA.orphans.forEach(o => { orphanMap[o.referrerName] = o; });
+}
+
+function getDefaultComboGroups() {
+  const combos = DATA.islands.filter(i => i.type.indexOf('\u5408\u4f53') >= 0);
+  return combos.map(c => [...c.referrers]);
+}
+
+function initState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      state = JSON.parse(saved);
+      return;
+    } catch(e) {}
+  }
+  state.comboGroups = getDefaultComboGroups();
+  state.scoutAssignments = {};
+  rebuildIslands();
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  document.getElementById('saveIndicator').textContent = '\u4fdd\u5b58\u6e08\u307f';
+  document.getElementById('saveIndicator').className = 'save-indicator';
+}
+
+function getRefData(name) {
+  if (smallReferrerMap[name]) return smallReferrerMap[name];
+  if (referrerMap[name]) return referrerMap[name];
+  if (orphanMap[name]) return orphanMap[name];
+  return null;
+}
+
+function rebuildIslands() {
+  const islands = [];
+  let id = 1;
+  const singleOriginals = DATA.islands.filter(i => i.type.indexOf('\u5358\u72ec') >= 0);
+  singleOriginals.forEach(orig => {
+    islands.push({
+      id: id++,
+      type: 'single',
+      referrers: [...orig.referrers],
+      newCount: orig.newCount,
+      total: orig.total,
+      members: [...orig.members]
+    });
+  });
+  state.comboGroups.forEach(group => {
+    let newCount = 0, members = [], total = 0;
+    group.forEach(name => {
+      const r = getRefData(name);
+      if (r) {
+        newCount += r.newCount;
+        total += r.total;
+        members = members.concat(r.members);
+      }
+    });
+    islands.push({
+      id: id++,
+      type: 'combined',
+      referrers: [...group],
+      newCount: newCount,
+      total: total,
+      members: members
+    });
+  });
+  state.islands = islands;
+}
+
+function getTotalNewCount() {
+  return state.islands.reduce((s, i) => s + i.newCount, 0);
+}
+
+function getTSScouts() {
+  return DATA.scouts.filter(s => s.category === 'TS');
+}
+
+function getPGScouts() {
+  return DATA.scouts.filter(s => s.category === 'PG\u751f');
+}
+
+function getTSTarget(island) {
+  const totalNew = getTotalNewCount();
+  const totalTS = getTSScouts().length;
+  if (totalNew === 0) return 0;
+  return Math.round(island.newCount / (totalNew / totalTS));
+}
+
+function getAssignedScouts(islandId) {
+  return Object.entries(state.scoutAssignments)
+    .filter(([_, iid]) => iid === islandId)
+    .map(([name]) => name);
+}
+
+function isOrphanAssigned(referrerName) {
+  return state.comboGroups.some(g => g.includes(referrerName));
+}
+
+// --- Rendering ---
+
+function renderAll() {
+  renderComboArea();
+  renderOrphanPool();
+  renderScoutPanel();
+  renderIslandGrid();
+  renderOverview();
+  renderPrint();
+}
+
+function renderComboArea() {
+  const container = document.getElementById('comboGroups');
+  container.innerHTML = '';
+  state.comboGroups.forEach((group, gi) => {
+    const div = document.createElement('div');
+    div.className = 'combo-group';
+    const totalNew = group.reduce((s, n) => {
+      const r = getRefData(n);
+      return s + (r ? r.newCount : 0);
+    }, 0);
+    const totalMembers = group.reduce((s, n) => {
+      const r = getRefData(n);
+      return s + (r ? r.total : 0);
+    }, 0);
+    if (totalNew < 6) div.classList.add('warning');
+    div.setAttribute('data-combo-index', gi);
+    div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
+    div.addEventListener('dragleave', () => { div.classList.remove('drag-over'); });
+    div.addEventListener('drop', e => {
+      e.preventDefault();
+      div.classList.remove('drag-over');
+      const refName = e.dataTransfer.getData('text/combo-referrer');
+      const orphanName = e.dataTransfer.getData('text/orphan-referrer');
+      const fromGroup = parseInt(e.dataTransfer.getData('text/combo-from'));
+      const nameToAdd = refName || orphanName;
+      if (!nameToAdd) return;
+      if (refName && fromGroup === gi) return;
+      if (refName && !isNaN(fromGroup) && state.comboGroups[fromGroup]) {
+        state.comboGroups[fromGroup] = state.comboGroups[fromGroup].filter(n => n !== refName);
+        if (state.comboGroups[fromGroup].length === 0) {
+          state.comboGroups.splice(fromGroup, 1);
+        }
+      }
+      const targetIdx = state.comboGroups.indexOf(group);
+      if (targetIdx >= 0 && !state.comboGroups[targetIdx].includes(nameToAdd)) {
+        state.comboGroups[targetIdx].push(nameToAdd);
+      }
+      rebuildIslands();
+      saveState();
+      renderAll();
+    });
+
+    const label = document.createElement('div');
+    label.className = 'combo-group-label';
+    label.textContent = '\u30b0\u30eb\u30fc\u30d7 ' + (gi + 1);
+    div.appendChild(label);
+
+    group.forEach(name => {
+      const chip = document.createElement('div');
+      chip.className = 'combo-chip';
+      const isOrphan = !!orphanMap[name];
+      if (isOrphan) chip.classList.add('orphan');
+      chip.draggable = true;
+      const r = getRefData(name);
+      chip.innerHTML = name + (isOrphan ? ' <span style="color:#c0392b;font-size:10px">[\u7d39\u4ecb\u8005\u4e0d\u5728]</span>' : '') + '<span class="new-count">(' + (r ? r.newCount : '?') + '\u4eba)</span>';
+      chip.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/combo-referrer', name);
+        e.dataTransfer.setData('text/combo-from', String(gi));
+      });
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        showSmallRefModal(name);
+      });
+      div.appendChild(chip);
+    });
+
+    const total = document.createElement('div');
+    total.className = 'combo-total';
+    total.textContent = '\u65b0\u898f' + totalNew + '\u4eba / \u5408\u8a08' + totalMembers + '\u4eba' + (totalNew < 6 ? ' (6\u4eba\u672a\u6e80!)' : '');
+    div.appendChild(total);
+
+    // グループ単位クリックでメンバー一覧モーダル
+    div.addEventListener('click', e => {
+      if (e.target.closest('.combo-chip')) return; // チップクリックは個別モーダル
+      showComboGroupModal(group, gi);
+    });
+    div.style.cursor = 'pointer';
+
+    container.appendChild(div);
+  });
+
+  const newZone = document.createElement('div');
+  newZone.className = 'combo-new-group';
+  newZone.textContent = '+ \u65b0\u30b0\u30eb\u30fc\u30d7';
+  newZone.addEventListener('dragover', e => { e.preventDefault(); newZone.classList.add('drag-over'); });
+  newZone.addEventListener('dragleave', () => { newZone.classList.remove('drag-over'); });
+  newZone.addEventListener('drop', e => {
+    e.preventDefault();
+    newZone.classList.remove('drag-over');
+    const refName = e.dataTransfer.getData('text/combo-referrer');
+    const orphanName = e.dataTransfer.getData('text/orphan-referrer');
+    const fromGroup = parseInt(e.dataTransfer.getData('text/combo-from'));
+    const nameToAdd = refName || orphanName;
+    if (!nameToAdd) return;
+    if (refName && !isNaN(fromGroup) && state.comboGroups[fromGroup]) {
+      state.comboGroups[fromGroup] = state.comboGroups[fromGroup].filter(n => n !== refName);
+      if (state.comboGroups[fromGroup].length === 0) {
+        state.comboGroups.splice(fromGroup, 1);
+      }
+    }
+    state.comboGroups.push([nameToAdd]);
+    rebuildIslands();
+    saveState();
+    renderAll();
+  });
+  container.appendChild(newZone);
+}
+
+function renderOrphanPool() {
+  const container = document.getElementById('orphanChips');
+  container.innerHTML = '';
+  if (!DATA.orphans || DATA.orphans.length === 0) {
+    document.getElementById('orphanPool').style.display = 'none';
+    return;
+  }
+  DATA.orphans.forEach(orphan => {
+    const chip = document.createElement('div');
+    chip.className = 'orphan-chip';
+    if (isOrphanAssigned(orphan.referrerName)) chip.classList.add('placed');
+    chip.draggable = true;
+    chip.innerHTML = orphan.referrerName + ' <span class="orphan-label">[\u7d39\u4ecb\u8005\u4e0d\u5728]</span><span class="new-count">(\u65b0\u898f' + orphan.newCount + '\u4eba)</span>';
+    chip.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/orphan-referrer', orphan.referrerName);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    chip.addEventListener('click', e => {
+      e.stopPropagation();
+      showSmallRefModal(orphan.referrerName);
+    });
+    container.appendChild(chip);
+  });
+}
+
+function renderScoutPanel() {
+  const container = document.getElementById('scoutList');
+  const search = document.getElementById('scoutSearch').value.trim().toLowerCase();
+  container.innerHTML = '';
+
+  const tsScouts = getTSScouts();
+  const pgScouts = getPGScouts();
+  const tsUnplaced = tsScouts.filter(s => !state.scoutAssignments[s.name]).length;
+  const pgUnplaced = pgScouts.filter(s => !state.scoutAssignments[s.name]).length;
+  const totalUnplaced = tsUnplaced + pgUnplaced;
+  const totalScouts = tsScouts.length + pgScouts.length;
+
+  document.getElementById('scoutUnplacedCount').textContent = '未配置: ' + totalUnplaced + '/' + totalScouts;
+
+  function renderGroup(label, scouts, unplacedCount, typeClass) {
+    const group = document.createElement('div');
+    group.className = 'scout-group';
+    const header = document.createElement('div');
+    header.className = 'scout-group-label';
+    header.innerHTML = label + ' <span class="unplaced-count">未配置: ' + unplacedCount + '</span>';
+    group.appendChild(header);
+
+    const chips = document.createElement('div');
+    chips.className = 'scout-chips';
+
+    scouts.forEach(scout => {
+      if (search && !scout.name.toLowerCase().includes(search) && !scout.yomi.toLowerCase().includes(search)) return;
+      const div = document.createElement('div');
+      div.className = 'scout-item ' + typeClass;
+      const assignedTo = state.scoutAssignments[scout.name];
+      if (assignedTo) div.classList.add('placed');
+      div.draggable = true;
+      div.innerHTML = scout.name + (assignedTo ? ' <span class="badge">島' + assignedTo + '</span>' : '');
+      div.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/scout-name', scout.name);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      chips.appendChild(div);
+    });
+
+    group.appendChild(chips);
+    container.appendChild(group);
+  }
+
+  renderGroup('TS（' + tsScouts.length + '人）', tsScouts, tsUnplaced, 'ts-type');
+  renderGroup('PG生（' + pgScouts.length + '人）', pgScouts, pgUnplaced, 'pg-type');
+}
+
+function renderIslandGrid() {
+  const container = document.getElementById('islandGrid');
+  container.innerHTML = '';
+
+  state.islands.forEach(island => {
+    const card = document.createElement('div');
+    card.className = 'island-card' + (island.type === 'combined' ? ' combined' : '');
+
+    const tsTarget = getTSTarget(island);
+    const assignedScouts = getAssignedScouts(island.id);
+    const assignedTS = assignedScouts.filter(name => {
+      const s = DATA.scouts.find(sc => sc.name === name);
+      return s && s.category === 'TS';
+    }).length;
+    const assignedPG = assignedScouts.filter(name => {
+      const s = DATA.scouts.find(sc => sc.name === name);
+      return s && s.category === 'PG\u751f';
+    }).length;
+    const pct = tsTarget > 0 ? Math.min(100, Math.round(assignedTS / tsTarget * 100)) : (assignedTS > 0 ? 100 : 0);
+    let barClass = 'red';
+    if (pct >= 80) barClass = 'green';
+    else if (pct >= 50) barClass = 'yellow';
+
+    const refDisplay = island.referrers.map(r => orphanMap[r] ? r + ' [\u4e0d\u5728]' : r).join(' + ');
+
+    card.innerHTML =
+      '<div class="island-card-header">' +
+        '<span class="island-number">\u5cf6' + island.id + '</span>' +
+        '<span class="island-referrers">' + refDisplay + '</span>' +
+      '</div>' +
+      '<div class="island-stats">' +
+        '<span>\u65b0\u898f: ' + island.newCount + '\u4eba</span>' +
+        '<span>TS\u76ee\u5b89: ' + tsTarget + '\u4eba</span>' +
+        '<span>\u914d\u7f6eTS: ' + assignedTS + '\u4eba</span>' +
+        '<span>\u914d\u7f6ePG: ' + assignedPG + '\u4eba</span>' +
+      '</div>' +
+      '<div class="progress-bar"><div class="progress-fill ' + barClass + '" style="width:' + pct + '%"></div></div>' +
+      '<div class="island-drop-zone" data-island-id="' + island.id + '">' +
+        '<div class="island-drop-zone-label">\u30b9\u30ab\u30a6\u30c8\u3092\u3053\u3053\u306b\u30c9\u30ed\u30c3\u30d7</div>' +
+      '</div>';
+
+    const dropZone = card.querySelector('.island-drop-zone');
+    assignedScouts.forEach(name => {
+      const chip = document.createElement('span');
+      chip.className = 'ts-chip';
+      const scout = DATA.scouts.find(s => s.name === name);
+      const cat = scout ? (scout.category === 'TS' ? 'TS' : 'PG') : '';
+      chip.innerHTML = name + (cat ? ' <span style="color:#888;font-size:10px">[' + cat + ']</span>' : '') + ' <span class="remove" data-scout="' + name + '">&times;</span>';
+      chip.querySelector('.remove').addEventListener('click', () => {
+        delete state.scoutAssignments[name];
+        saveState();
+        renderAll();
+      });
+      dropZone.appendChild(chip);
+    });
+
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('remove') || e.target.closest('.remove')) return;
+      showIslandModal(island);
+    });
+
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      card.classList.add('drop-hover');
+    });
+    card.addEventListener('dragleave', e => {
+      if (!card.contains(e.relatedTarget)) {
+        card.classList.remove('drop-hover');
+      }
+    });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('drop-hover');
+      const scoutName = e.dataTransfer.getData('text/scout-name');
+      if (!scoutName) return;
+      state.scoutAssignments[scoutName] = island.id;
+      saveState();
+      renderAll();
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function chunkArray(arr, size) {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function renderOverview() {
+  const container = document.getElementById('overviewGrid');
+  container.innerHTML = '';
+  container.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;padding:24px;align-items:start;';
+
+  function addSectionLabel(text) {
+    var label = document.createElement('div');
+    label.style.cssText = 'width:100%;font-size:13px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.04em;padding:12px 0 4px;border-bottom:1px solid #ccc;margin-top:4px;';
+    label.textContent = text;
+    container.appendChild(label);
+  }
+
+  function personChip(name, type) {
+    var colors = {
+      referrer: 'background:#e0ecff;color:#1a3a6a;border:1px solid #a0bce0;',
+      orphanRef: 'background:#ffe8e8;color:#8a2020;border:1px solid #d09090;',
+      new: 'background:#f5f5f5;color:#333;border:1px solid #d0d0d0;',
+      ts: 'background:#e0f5e0;color:#1a5a1a;border:1px solid #90c890;',
+      pg: 'background:#f5f0e0;color:#5a4a1a;border:1px solid #c8b880;',
+      employee: 'background:#eef3ff;color:#2a3a5a;border:1px solid #b0c0d8;',
+      scout: 'background:#f0f8f0;color:#2a4a2a;border:1px solid #a0c8a0;',
+    };
+    return '<span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;margin:1px;white-space:nowrap;' + (colors[type] || colors.new) + '">' + name + '</span>';
+  }
+
+  addSectionLabel('紹介者島（' + state.islands.length + '島）');
+
+  state.islands.forEach(function(island) {
+    var assignedScouts = getAssignedScouts(island.id);
+    var totalPeople = island.referrers.length + island.newCount + assignedScouts.length;
+
+    var tile = document.createElement('div');
+    var isCombined = island.type.indexOf('合体') >= 0;
+    tile.className = 'overview-tile' + (isCombined ? ' combined' : '');
+    tile.style.cssText = 'flex-shrink:0;';
+
+    // ヘッダー
+    var html = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">';
+    html += '<h4 style="margin:0;font-size:15px;">島' + island.id + '</h4>';
+    html += '<span style="font-size:13px;color:#888;">' + totalPeople + '人</span>';
+    html += '</div>';
+
+    // 全チップを配列に集める
+    var chips = [];
+    island.referrers.forEach(function(name) {
+      var isOrph = !!orphanMap[name];
+      chips.push(personChip(isOrph ? name + '(不在)' : '★ ' + name, isOrph ? 'orphanRef' : 'referrer'));
+    });
+    island.members.forEach(function(name) {
+      chips.push(personChip(name, 'new'));
+    });
+    assignedScouts.forEach(function(name) {
+      var scout = DATA.scouts.find(function(s) { return s.name === name; });
+      var cat = scout ? scout.category : '';
+      var type = cat === 'TS' ? 'ts' : 'pg';
+      chips.push(personChip(name + ' [' + cat + ']', type));
+    });
+
+    // 2行グリッド: 列数 = ceil(chips / 2)
+    var cols = Math.ceil(chips.length / 2);
+    html += '<div style="display:grid;grid-template-rows:1fr 1fr;grid-template-columns:repeat(' + cols + ',auto);grid-auto-flow:column;gap:3px;margin-top:4px;">';
+    chips.forEach(function(c) { html += c; });
+    html += '</div>';
+
+    tile.innerHTML = html;
+    tile.addEventListener('click', function() { showIslandModal(island); });
+    container.appendChild(tile);
+  });
+
+  // 未配置スカウト島（ドラッグ＆ドロップ対応）
+  var unplacedScouts = DATA.scouts.filter(function(s) { return !state.scoutAssignments[s.name]; });
+  if (unplacedScouts.length > 0) {
+    if (!state.scoutIslandGroups) {
+      state.scoutIslandGroups = chunkArray(unplacedScouts.map(function(s){ return s.name; }), 6);
+    } else {
+      var currentNames = {};
+      unplacedScouts.forEach(function(s){ currentNames[s.name] = true; });
+      state.scoutIslandGroups = state.scoutIslandGroups.map(function(g){
+        return g.filter(function(n){ return currentNames[n]; });
+      }).filter(function(g){ return g.length > 0; });
+      var inGroups = {};
+      state.scoutIslandGroups.forEach(function(g){ g.forEach(function(n){ inGroups[n]=true; }); });
+      unplacedScouts.forEach(function(s){
+        if (!inGroups[s.name]) {
+          var last = state.scoutIslandGroups[state.scoutIslandGroups.length - 1];
+          if (last && last.length < 6) last.push(s.name);
+          else state.scoutIslandGroups.push([s.name]);
+        }
+      });
+    }
+
+    addSectionLabel('未配置スカウト島（' + unplacedScouts.length + '人 → ' + state.scoutIslandGroups.length + '島）');
+    renderDndIslands(container, state.scoutIslandGroups, 'scout', 'S島', '#90b880', '#f5fbf0');
+  }
+
+  // 社員島（ドラッグ＆ドロップ対応）
+  if (!state.employeeIslandGroups) {
+    state.employeeIslandGroups = chunkArray(DATA.employees.map(function(e){ return e.name; }), 6);
+  }
+  addSectionLabel('社員島（' + DATA.employees.length + '人 → ' + state.employeeIslandGroups.length + '島）');
+  renderDndIslands(container, state.employeeIslandGroups, 'employee', '社員島', '#b0c0d8', '#f5f9ff');
+
+  // ビット
+  addSectionLabel('ビット（巡回）');
+  var bitTile = document.createElement('div');
+  bitTile.className = 'overview-tile bit';
+  bitTile.style.cssText = 'flex-shrink:0;';
+  var bHtml = '<h4 style="font-size:13px;margin-bottom:6px;">ビット（巡回）</h4>';
+  var bChips = [];
+  DATA.bits.forEach(function(b) { bChips.push(personChip(b.name, 'scout')); });
+  var bCols = Math.ceil(bChips.length / 2) || 1;
+  bHtml += '<div style="display:grid;grid-template-rows:1fr 1fr;grid-template-columns:repeat(' + bCols + ',auto);grid-auto-flow:column;gap:3px;">';
+  bChips.forEach(function(c) { bHtml += c; });
+  bHtml += '</div>';
+  bHtml += '<div style="font-size:11px;color:#888;margin-top:4px;">※島に固定しない</div>';
+  bitTile.innerHTML = bHtml;
+  container.appendChild(bitTile);
+}
+
+function draggableChip(name, type, dragType, groupIndex) {
+  var colors = {
+    employee: 'background:#eef3ff;color:#2a3a5a;border:1px solid #b0c0d8;',
+    scout: 'background:#f0f8f0;color:#2a4a2a;border:1px solid #a0c8a0;',
+  };
+  return '<span draggable="true" data-drag-type="' + dragType + '" data-name="' + name.replace(/'/g,"&#39;") + '" data-from="' + groupIndex + '" style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;margin:1px;white-space:nowrap;cursor:grab;' + (colors[type] || '') + '">' + name + '</span>';
+}
+
+function renderDndIslands(container, groups, type, labelPrefix, borderColor, bgColor) {
+  var stateKey = type === 'scout' ? 'scoutIslandGroups' : 'employeeIslandGroups';
+
+  groups.forEach(function(group, gi) {
+    var tile = document.createElement('div');
+    tile.className = 'overview-tile';
+    tile.style.cssText = 'border-color:' + borderColor + ';background:' + bgColor + ';flex-shrink:0;';
+
+    var html = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">';
+    html += '<h4 style="margin:0;font-size:13px;">' + labelPrefix + (gi + 1) + '</h4>';
+    html += '<span style="font-size:12px;color:#888;">' + group.length + '人</span></div>';
+    var cols = Math.ceil(group.length / 2) || 1;
+    html += '<div style="display:grid;grid-template-rows:1fr 1fr;grid-template-columns:repeat(' + cols + ',auto);grid-auto-flow:column;gap:3px;">';
+    group.forEach(function(name) { html += draggableChip(name, type, type, gi); });
+    html += '</div>';
+    tile.innerHTML = html;
+
+    // クリックで補足情報（社員の場合）
+    tile.addEventListener('click', function(e) {
+      var el = e.target.closest('[data-name]');
+      if (!el || !el.dataset.name) return;
+      if (el.draggable && e.detail === 1) {
+        // シングルクリックで情報表示
+        var name = el.dataset.name;
+        if (type === 'employee') {
+          var emp = DATA.employees.find(function(em){ return em.name === name; });
+          if (emp) showEmployeeTooltip(e, emp);
+        }
+      }
+    });
+
+    // ドラッグ開始（子要素委譲）
+    tile.addEventListener('dragstart', function(e) {
+      var el = e.target;
+      if (!el.dataset || !el.dataset.name) return;
+      e.dataTransfer.setData('text/ov-name', el.dataset.name);
+      e.dataTransfer.setData('text/ov-type', el.dataset.dragType);
+      e.dataTransfer.setData('text/ov-from', el.dataset.from);
+    });
+
+    // ドロップ対応
+    tile.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      tile.style.boxShadow = '0 0 0 3px rgba(0,122,255,0.2)';
+    });
+    tile.addEventListener('dragleave', function(e) {
+      if (!tile.contains(e.relatedTarget)) tile.style.boxShadow = '';
+    });
+    tile.addEventListener('drop', function(e) {
+      e.preventDefault();
+      tile.style.boxShadow = '';
+      var name = e.dataTransfer.getData('text/ov-name');
+      var fromType = e.dataTransfer.getData('text/ov-type');
+      var fromIdx = parseInt(e.dataTransfer.getData('text/ov-from'));
+      if (!name || fromType !== type) return;
+      if (fromIdx === gi) return;
+
+      var grps = state[stateKey];
+      // 元グループから除去
+      if (grps[fromIdx]) {
+        grps[fromIdx] = grps[fromIdx].filter(function(n){ return n !== name; });
+      }
+      // 空グループ除去（先にtarget indexを調整）
+      var targetGi = gi;
+      grps = grps.filter(function(g, idx) {
+        if (g.length === 0) { if (idx < targetGi) targetGi--; return false; }
+        return true;
+      });
+      state[stateKey] = grps;
+      // 先グループに追加
+      if (grps[targetGi]) grps[targetGi].push(name);
+      else grps.push([name]);
+
+      saveState();
+      renderOverview();
+    });
+
+    container.appendChild(tile);
+  });
+}
+
+function showIslandModal(island) {
+  var assignedScouts = getAssignedScouts(island.id);
+  var overlay = document.getElementById('modalOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'modalOverlay';
+    overlay.className = 'modal-overlay';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('active'); });
+    document.body.appendChild(overlay);
+  }
+  var refDisplay = island.referrers.map(function(r) { return orphanMap[r] ? r + '（不在）' : r; }).join('、');
+  var total = island.referrers.length + island.newCount + assignedScouts.length;
+  var html = '<div class="modal"><button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'active\')">&times;</button>';
+  html += '<h3>島' + island.id + '　' + refDisplay + '</h3>';
+  html += '<div class="modal-subtitle">合計 ' + total + '人（紹介者' + island.referrers.length + ' + 新規' + island.newCount + ' + スカウト' + assignedScouts.length + '）</div>';
+  html += '<div class="modal-section"><div class="modal-section-title">紹介者（' + island.referrers.length + '人）</div><div class="modal-member-list">';
+  island.referrers.forEach(function(name) {
+    var cls = orphanMap[name] ? 'modal-member orphan-ref' : 'modal-member referrer';
+    html += '<span class="' + cls + '">' + name + (orphanMap[name] ? ' [不在]' : '') + '</span>';
+  });
+  html += '</div></div>';
+  html += '<div class="modal-section"><div class="modal-section-title">新規メンバー（' + island.newCount + '人）</div><div class="modal-member-list">';
+  island.members.forEach(function(name) { html += '<span class="modal-member">' + name + '</span>'; });
+  html += '</div></div>';
+  if (assignedScouts.length > 0) {
+    html += '<div class="modal-section"><div class="modal-section-title">配置済みスカウト（' + assignedScouts.length + '人）</div><div class="modal-member-list">';
+    assignedScouts.forEach(function(name) {
+      var scout = DATA.scouts.find(function(s) { return s.name === name; });
+      var cat = scout ? scout.category : '';
+      var cls = cat === 'TS' ? 'modal-member ts' : 'modal-member pg';
+      html += '<span class="' + cls + '">' + name + ' [' + cat + ']</span>';
+    });
+    html += '</div></div>';
+  }
+  html += '</div>';
+  overlay.innerHTML = html;
+  overlay.classList.add('active');
+}
+
+function showComboGroupModal(group, groupIndex) {
+  var overlay = document.getElementById('modalOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'modalOverlay';
+    overlay.className = 'modal-overlay';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('active'); });
+    document.body.appendChild(overlay);
+  }
+  var totalNew = 0;
+  group.forEach(function(name) { var r = getRefData(name); if (r) totalNew += r.newCount; });
+  var html = '<div class="modal"><button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'active\')">&times;</button>';
+  html += '<h3>合体グループ ' + (groupIndex + 1) + '</h3>';
+  html += '<div class="modal-subtitle">紹介者 ' + group.length + '人 / 新規 ' + totalNew + '人 / 合計 ' + (group.length + totalNew) + '人</div>';
+  group.forEach(function(name) {
+    var r = getRefData(name);
+    if (!r) return;
+    var isOrphan = !!orphanMap[name];
+    html += '<div class="modal-section"><div class="modal-section-title">' + name + (isOrphan ? '（紹介者不在）' : '') + ' — 新規' + r.newCount + '人</div>';
+    html += '<div class="modal-member-list">';
+    r.members.forEach(function(m) { html += '<span class="modal-member">' + m + '</span>'; });
+    html += '</div></div>';
+  });
+  html += '</div>';
+  overlay.innerHTML = html;
+  overlay.classList.add('active');
+}
+
+function showSmallRefModal(refName) {
+  var refData = smallReferrerMap[refName] || orphanMap[refName];
+  if (!refData) return;
+  var overlay = document.getElementById('modalOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'modalOverlay';
+    overlay.className = 'modal-overlay';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('active'); });
+    document.body.appendChild(overlay);
+  }
+  var isOrphan = !!refData.isOrphan;
+  var label = isOrphan ? refData.referrerName + '（紹介者不在）' : refName;
+  var html = '<div class="modal"><button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'active\')">&times;</button>';
+  html += '<h3>' + label + '</h3>';
+  html += '<div class="modal-subtitle">' + (isOrphan ? 'ビット巡回/不参加のため紹介者不在' : '小島（合体候補）') + '　新規 ' + refData.newCount + '人</div>';
+  html += '<div class="modal-section"><div class="modal-section-title">新規メンバー（' + refData.newCount + '人）</div><div class="modal-member-list">';
+  refData.members.forEach(function(name) { html += '<span class="modal-member">' + name + '</span>'; });
+  html += '</div></div></div>';
+  overlay.innerHTML = html;
+  overlay.classList.add('active');
+}
+
+function showEmployeeTooltip(event, emp) {
+  var existing = document.getElementById('empTooltip');
+  if (existing) existing.remove();
+
+  var tip = document.createElement('div');
+  tip.id = 'empTooltip';
+  tip.style.cssText = 'position:fixed;z-index:2000;background:#fff;border:1px solid #ccc;border-radius:12px;padding:14px 18px;box-shadow:0 8px 24px rgba(0,0,0,0.15);font-size:13px;line-height:1.8;max-width:320px;';
+  tip.style.left = Math.min(event.clientX + 10, window.innerWidth - 340) + 'px';
+  tip.style.top = Math.min(event.clientY - 20, window.innerHeight - 200) + 'px';
+  tip.innerHTML = '<div style="font-weight:600;font-size:15px;margin-bottom:4px;">' + emp.name + '</div>' +
+    '<div style="color:#555;">紹介者: <strong>' + (emp.referrer || '—') + '</strong></div>' +
+    '<div style="color:#555;">役職: ' + (emp.role || '—') + '</div>' +
+    '<div style="color:#555;">ヨミ: ' + (emp.yomi || '—') + '</div>';
+
+  document.body.appendChild(tip);
+  setTimeout(function() {
+    document.addEventListener('click', function handler() {
+      var t = document.getElementById('empTooltip');
+      if (t) t.remove();
+      document.removeEventListener('click', handler);
+    });
+  }, 100);
+}
+
+function renderPrint() {
+  const container = document.getElementById('printArea');
+  let html = '<div class="print-title">PBC合宿2026 席割り配置表</div>';
+  html += '<table class="print-table"><tr><th>島#</th><th>紹介者</th><th>新規人数</th><th>新規メンバー</th><th>スカウトTS</th><th>合計</th></tr>';
+
+  state.islands.forEach(island => {
+    const assignedScouts = getAssignedScouts(island.id);
+    const refs = island.referrers.map(name => {
+      const isOrph = !!orphanMap[name];
+      return isOrph ? name + '(不在)' : name;
+    }).join('、');
+    const membersStr = island.members.join('、');
+    const scoutsStr = assignedScouts.join('、');
+    const total = island.referrers.length + island.newCount + assignedScouts.length;
+    html += '<tr>';
+    html += '<td style="text-align:center;font-weight:600;">' + island.id + '</td>';
+    html += '<td>' + refs + '</td>';
+    html += '<td style="text-align:center;">' + island.newCount + '</td>';
+    html += '<td class="print-members">' + membersStr + '</td>';
+    html += '<td class="print-members">' + (scoutsStr || '—') + '</td>';
+    html += '<td style="text-align:center;">' + total + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</table>';
+  container.innerHTML = html;
+}
+
+function copyToClipboard() {
+  let tsv = '\u5cf6\u756a\u53f7\t\u7d39\u4ecb\u8005\t\u533a\u5206\t\u540d\u524d\n';
+  state.islands.forEach(island => {
+    island.referrers.forEach(name => {
+      tsv += island.id + '\t' + island.referrers.join('+') + '\t\u7d39\u4ecb\u8005\t' + name + '\n';
+    });
+    island.members.forEach(name => {
+      tsv += island.id + '\t' + island.referrers.join('+') + '\t\u65b0\u898f\t' + name + '\n';
+    });
+    const assignedScouts = getAssignedScouts(island.id);
+    assignedScouts.forEach(name => {
+      const scout = DATA.scouts.find(s => s.name === name);
+      tsv += island.id + '\t' + island.referrers.join('+') + '\t' + (scout ? scout.category : '') + '\t' + name + '\n';
+    });
+  });
+  navigator.clipboard.writeText(tsv).then(() => {
+    alert('\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f');
+  });
+}
+
+function resetAll() {
+  if (!confirm('\u5168\u3066\u306e\u914d\u7f6e\u3092\u30ea\u30bb\u30c3\u30c8\u3057\u307e\u3059\u304b\uff1f\u3053\u306e\u64cd\u4f5c\u306f\u53d6\u308a\u6d88\u305b\u307e\u305b\u3093\u3002')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state.comboGroups = getDefaultComboGroups();
+  state.scoutAssignments = {};
+  rebuildIslands();
+  saveState();
+  renderAll();
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('scoutSearch').addEventListener('input', () => {
+  renderScoutPanel();
+});
+
+initState();
+rebuildIslands();
+
+function getSaveSlots() {
+  try { return JSON.parse(localStorage.getItem('pbc2026_save_slots') || '[]'); } catch(e) { return []; }
+}
+function setSaveSlots(slots) {
+  localStorage.setItem('pbc2026_save_slots', JSON.stringify(slots));
+}
+
+function showSaveDialog() {
+  var overlay = document.getElementById('saveDialogOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'saveDialogOverlay';
+    overlay.className = 'save-dialog-overlay';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('active'); });
+    document.body.appendChild(overlay);
+  }
+  var now = new Date();
+  var defaultName = now.getFullYear() + '/' + ('0'+(now.getMonth()+1)).slice(-2) + '/' + ('0'+now.getDate()).slice(-2) + ' ' + ('0'+now.getHours()).slice(-2) + ':' + ('0'+now.getMinutes()).slice(-2);
+  overlay.innerHTML = '<div class="save-dialog">' +
+    '<h3>名前を付けて保存</h3>' +
+    '<input type="text" id="saveNameInput" value="' + defaultName + '" placeholder="保存名を入力...">' +
+    '<div><button class="save-btn" onclick="doSave()">保存</button><button class="cancel-btn" onclick="document.getElementById(\'saveDialogOverlay\').classList.remove(\'active\')">キャンセル</button></div>' +
+    '</div>';
+  overlay.classList.add('active');
+  setTimeout(function() { document.getElementById('saveNameInput').select(); }, 100);
+}
+
+function doSave() {
+  var name = document.getElementById('saveNameInput').value.trim();
+  if (!name) { alert('保存名を入力してください'); return; }
+  var slots = getSaveSlots();
+  var data = {
+    name: name,
+    savedAt: new Date().toISOString(),
+    comboGroups: state.comboGroups,
+    scoutAssignments: state.scoutAssignments,
+    scoutIslandGroups: state.scoutIslandGroups,
+    employeeIslandGroups: state.employeeIslandGroups
+  };
+  // 同名があれば上書き
+  var idx = slots.findIndex(function(s) { return s.name === name; });
+  if (idx >= 0) slots[idx] = data;
+  else slots.push(data);
+  setSaveSlots(slots);
+  document.getElementById('saveDialogOverlay').classList.remove('active');
+  var ind = document.getElementById('saveIndicator');
+  ind.textContent = '保存済み: ' + name;
+  ind.className = 'save-indicator';
+}
+
+function showLoadDialog() {
+  var overlay = document.getElementById('saveDialogOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'saveDialogOverlay';
+    overlay.className = 'save-dialog-overlay';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('active'); });
+    document.body.appendChild(overlay);
+  }
+  var slots = getSaveSlots();
+  var html = '<div class="save-dialog"><h3>保存データを呼び出し</h3>';
+  if (slots.length === 0) {
+    html += '<div style="color:#888;font-size:14px;padding:20px 0;">保存データがありません</div>';
+  } else {
+    html += '<div class="save-list">';
+    slots.forEach(function(slot, i) {
+      var dt = new Date(slot.savedAt);
+      var timeStr = ('0'+dt.getHours()).slice(-2) + ':' + ('0'+dt.getMinutes()).slice(-2);
+      html += '<div class="save-slot" onclick="doLoad(' + i + ')">' +
+        '<div><span class="slot-name">' + slot.name + '</span><br><span class="slot-time">' + timeStr + '</span></div>' +
+        '<span class="slot-delete" onclick="event.stopPropagation();doDeleteSlot(' + i + ')">削除</span>' +
+        '</div>';
+    });
+    html += '</div>';
+  }
+  html += '<div style="margin-top:16px;"><button class="cancel-btn" onclick="document.getElementById(\'saveDialogOverlay\').classList.remove(\'active\')">閉じる</button></div></div>';
+  overlay.innerHTML = html;
+  overlay.classList.add('active');
+}
+
+function doLoad(index) {
+  var slots = getSaveSlots();
+  var slot = slots[index];
+  if (!slot) return;
+  if (!confirm('"' + slot.name + '" を読み込みます。現在の作業内容は上書きされます。よろしいですか？')) return;
+  if (slot.comboGroups) state.comboGroups = slot.comboGroups;
+  if (slot.scoutAssignments) state.scoutAssignments = slot.scoutAssignments;
+  if (slot.scoutIslandGroups) state.scoutIslandGroups = slot.scoutIslandGroups;
+  if (slot.employeeIslandGroups) state.employeeIslandGroups = slot.employeeIslandGroups;
+  rebuildIslands();
+  saveState();
+  renderAll();
+  document.getElementById('saveDialogOverlay').classList.remove('active');
+  var ind = document.getElementById('saveIndicator');
+  ind.textContent = '読み込み済み: ' + slot.name;
+  ind.className = 'save-indicator';
+}
+
+function doDeleteSlot(index) {
+  var slots = getSaveSlots();
+  if (!confirm('"' + slots[index].name + '" を削除しますか？')) return;
+  slots.splice(index, 1);
+  setSaveSlots(slots);
+  showLoadDialog();
+}
+
+renderAll();
+
+</script>
+</body>
+</html>
