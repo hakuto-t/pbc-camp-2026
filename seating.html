@@ -2095,6 +2095,8 @@ function rebuildIslands() {
       members: members
     });
   });
+  islands.sort((a, b) => b.newCount - a.newCount);
+  islands.forEach((isl, idx) => { isl.id = idx + 1; });
   state.islands = islands;
 }
 
